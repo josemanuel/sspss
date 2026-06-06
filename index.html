@@ -185,6 +185,7 @@
         @media (max-width: 1024px) { .sidebar { position: fixed; left: 0; top: var(--header-h); bottom: 0; transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .mobile-toggle { display: block; } .main-content { margin-left: 0; } .charts-grid { grid-template-columns: 1fr; } }
         @media (max-width: 768px) { .main-menu { display: none; } .header-actions { gap: 4px; } .header-btn span { display: none; } .header-btn { padding: 8px; } .content-tabs { padding: 0 8px; } .tab-btn { padding: 8px 12px; font-size: 0.8rem; } .tab-btn span { display: none; } .data-toolbar { padding: 8px; } .toolbar-info { display: none; } .modal { width: 95%; } .output-table { font-size: 0.75rem; } .output-table th, .output-table td { padding: 6px; } .analysis-config { grid-template-columns: 1fr; } }
     </style>
+<base target="_blank">
 </head>
 <body>
     <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv,.db,.sqlite,.sqlite3" onchange="handleFileImport(event)">
@@ -204,6 +205,8 @@
                     <div class="dropdown-item" onclick="exportSQLite()"><i class="fas fa-database"></i> Exportar SQLite</div>
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-item" onclick="loadDemoData()"><i class="fas fa-flask"></i> Cargar Datos Demo</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" onclick="showAboutDialog()"><i class="fas fa-info-circle"></i> Acerca de...</div>
                 </div>
             </div>
             <div class="menu-item"><i class="fas fa-edit"></i> Editar
@@ -572,7 +575,7 @@
             <div class="modal-header"><span class="modal-title"><i class="fas fa-question-circle"></i> Ayuda - StatView Pro</span><button class="modal-close" onclick="closeModal('helpModal')">&times;</button></div>
             <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                 <h3 style="color: var(--primary); margin-bottom: 12px;">Bienvenido a StatView Pro</h3>
-                <p style="margin-bottom: 16px; line-height: 1.6;">StatView Pro es una aplicación de análisis estadístico completa inspirada en SPSS,  desarrollada por el Dr. José Manuel Fernández Carreira, que funciona completamente en tu navegador usando SQLite como motor de base de datos.</p>
+                <p style="margin-bottom: 16px; line-height: 1.6;">StatView Pro es una aplicación de análisis estadístico completa inspirada en SPSS, que funciona completamente en tu navegador usando SQLite como motor de base de datos.</p>
                 <h4 style="color: var(--primary); margin: 16px 0 8px;">Comandos de Sintaxis</h4>
                 <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.8;">
                     <div><b>DESCRIPTIVES</b> var1 var2 var3</div>
@@ -598,6 +601,77 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="closeModal('helpModal')">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Dialog -->
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal" style="max-width: 750px;">
+            <div class="modal-header">
+                <span class="modal-title"><i class="fas fa-info-circle"></i> Acerca de StatView Pro</span>
+                <button class="modal-close" onclick="closeModal('aboutModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                        <i class="fas fa-chart-line" style="font-size: 2.5rem; color: white;"></i>
+                    </div>
+                    <h2 style="color: var(--primary); margin-bottom: 4px;">StatView Pro</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Análisis Estadístico Descriptivo e Inferencial</p>
+                    <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px;">Versión 1.0 &bull; 2026</p>
+                </div>
+
+                <div style="background: var(--bg-light); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; border-left: 4px solid var(--secondary);">
+                    <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 10px;"><i class="fas fa-user"></i> Autor</h3>
+                    <p style="font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                        <strong>Dr. José Manuel Fernández Carreira</strong><br>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">https://orcid.org/0000-0002-4097-3224</span>
+                    </p>
+                </div>
+
+                <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 12px;"><i class="fas fa-cogs"></i> Características Implementadas</h3>
+                <div style="overflow-x: auto;">
+                    <table class="output-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left;">Módulo</th>
+                                <th style="text-align: left;">Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-database" style="color: var(--secondary); margin-right: 6px;"></i>Base de datos</td><td>SQLite vía SQL.js (WebAssembly) — completamente en cliente, sin servidor</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-file-import" style="color: var(--secondary); margin-right: 6px;"></i>Importación</td><td>Excel (.xlsx), CSV, SQLite (.db / .sqlite / .sqlite3)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-file-export" style="color: var(--secondary); margin-right: 6px;"></i>Exportación</td><td>Excel, CSV, SQLite (.db), HTML (output), PNG (gráficos)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-table" style="color: var(--secondary); margin-right: 6px;"></i>Vista de Datos</td><td>Tabla editable tipo spreadsheet con navegación por teclado (flechas, Tab)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-tags" style="color: var(--secondary); margin-right: 6px;"></i>Vista de Variables</td><td>Definición de tipos (numérico, entero, cadena, fecha), etiquetas, valores, medida (nominal / ordinal / escala)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-list-ol" style="color: var(--secondary); margin-right: 6px;"></i>Descriptivos</td><td>Media, mediana, moda, desviación estándar, varianza, mínimo, máximo, rango, percentiles (Q1, Q3, IQR, P5, P10, P90, P95), asimetría (skewness), curtosis (kurtosis)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-balance-scale" style="color: var(--secondary); margin-right: 6px;"></i>T-Test</td><td>One-sample, independent samples (muestras independientes), paired samples (muestras pareadas) con intervalos de confianza</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-layer-group" style="color: var(--secondary); margin-right: 6px;"></i>ANOVA</td><td>Unidireccional (one-way) con tabla completa, eta cuadrado (tamaño del efecto)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-project-diagram" style="color: var(--secondary); margin-right: 6px;"></i>Correlaciones</td><td>Pearson (paramétrico) y Spearman (no paramétrico) con matriz completa, valores p e interpretación</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-chart-line" style="color: var(--secondary); margin-right: 6px;"></i>Regresión</td><td>Lineal múltiple (OLS) con coeficientes, errores estándar, t, valores p, R², R² ajustado, ANOVA del modelo y ecuación</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-check-square" style="color: var(--secondary); margin-right: 6px;"></i>Chi-Cuadrado</td><td>Prueba de independencia con tablas de contingencia, frecuencias observadas y esperadas</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-chart-pie" style="color: var(--secondary); margin-right: 6px;"></i>Frecuencias</td><td>Tablas de frecuencia con porcentajes, acumulados, gráficos de barras y pastel opcionales</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-table" style="color: var(--secondary); margin-right: 6px;"></i>Tablas Cruzadas</td><td>Contingencia con chi-cuadrado integrado, porcentajes y frecuencias esperadas</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-chart-area" style="color: var(--secondary); margin-right: 6px;"></i>Gráficos</td><td>Histograma, boxplot, dispersión (scatter), barras, pastel (pie), líneas — generados con Chart.js</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-code" style="color: var(--secondary); margin-right: 6px;"></i>Sintaxis</td><td>Editor de comandos tipo SPSS ejecutable línea por línea: DESCRIPTIVES, TTEST, ANOVA, CORRELATIONS, REGRESSION, FREQUENCIES, CROSSTABS, CHISQUARE</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-calculator" style="color: var(--secondary); margin-right: 6px;"></i>Transformaciones</td><td>Logaritmo natural, logaritmo base 10, raíz cuadrada, cuadrado, recíproco, Z-score (estandarizar), valor absoluto, fórmula personalizada</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-layer-group" style="color: var(--secondary); margin-right: 6px;"></i>Datasets múltiples</td><td>Gestión de múltiples datasets simultáneos con conmutación rápida</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-mobile-alt" style="color: var(--secondary); margin-right: 6px;"></i>Responsive</td><td>Diseño adaptativo completo para móvil, tablet y escritorio con menú hamburguesa</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-keyboard" style="color: var(--secondary); margin-right: 6px;"></i>Atajos de teclado</td><td>Ctrl+O (importar), Ctrl+S (exportar Excel), Ctrl+R (ejecutar sintaxis), Ctrl+1–5 (cambiar pestañas)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background: var(--bg-light); border-radius: var(--radius); padding: 14px; margin-top: 20px;">
+                    <h4 style="color: var(--primary); font-size: 0.9rem; margin-bottom: 8px;"><i class="fas fa-lightbulb"></i> Tecnologías utilizadas</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin: 0;">
+                        HTML5 &bull; CSS3 &bull; JavaScript (Vanilla) &bull; SQL.js (SQLite WebAssembly) &bull; SheetJS (xlsx.js) &bull; Chart.js &bull; Font Awesome
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('aboutModal')">Cerrar</button>
             </div>
         </div>
     </div>
@@ -1466,6 +1540,7 @@ function showTransformDialog() { populateVarSelectors(); showModal('transformMod
 function showNewDatasetDialog() { const name = prompt('Nombre del nuevo dataset:'); if (name) createDataset(name); }
 function showImportSQLDialog() { document.getElementById('fileInput').accept = '.db,.sqlite,.sqlite3'; document.getElementById('fileInput').click(); document.getElementById('fileInput').accept = '.xlsx,.xls,.csv,.db,.sqlite,.sqlite3'; }
 function showHelpDialog() { showModal('helpModal'); }
+function showAboutDialog() { showModal('aboutModal'); }
 
 function showDatasetsDialog() {
     const grid = document.getElementById('datasetGrid');

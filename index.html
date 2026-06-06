@@ -1,0 +1,2929 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StatView Pro - Análisis Estadístico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1a5276; --primary-dark: #154360; --secondary: #2980b9;
+            --accent: #e74c3c; --accent-hover: #c0392b; --bg-dark: #2c3e50;
+            --bg-panel: #34495e; --bg-light: #ecf0f1; --bg-white: #ffffff;
+            --text-dark: #2c3e50; --text-light: #ecf0f1; --text-muted: #7f8c8d;
+            --border: #bdc3c7; --border-light: #d5dbdb; --success: #27ae60;
+            --warning: #f39c12; --shadow: 0 2px 8px rgba(0,0,0,0.15);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.2); --radius: 6px; --radius-sm: 4px;
+            --header-h: 56px; --sidebar-w: 260px; --syntax-h: 180px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-light); color: var(--text-dark); overflow: hidden; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-light); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .app-header { height: var(--header-h); background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: var(--text-light); display: flex; align-items: center; padding: 0 20px; box-shadow: var(--shadow-lg); z-index: 1000; position: relative; }
+        .app-logo { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-right: 30px; }
+        .app-logo i { font-size: 1.6rem; }
+        .main-menu { display: flex; gap: 4px; flex: 1; }
+        .menu-item { position: relative; padding: 8px 14px; cursor: pointer; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 500; transition: all 0.2s; user-select: none; }
+        .menu-item:hover { background: rgba(255,255,255,0.15); }
+        .menu-item .dropdown { display: none; position: absolute; top: 100%; left: 0; background: var(--bg-white); color: var(--text-dark); min-width: 220px; border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px 0; z-index: 1001; margin-top: 4px; }
+        .menu-item:hover .dropdown { display: block; }
+        .dropdown-item { padding: 8px 16px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+        .dropdown-item:hover { background: var(--bg-light); }
+        .dropdown-item i { width: 18px; text-align: center; color: var(--secondary); }
+        .dropdown-divider { height: 1px; background: var(--border-light); margin: 6px 0; }
+        .dropdown-header { padding: 6px 16px; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header-btn { background: rgba(255,255,255,0.12); border: none; color: var(--text-light); padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .header-btn:hover { background: rgba(255,255,255,0.25); }
+        .dataset-badge { background: var(--success); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .mobile-toggle { display: none; background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer; padding: 8px; }
+        .app-body { display: flex; height: calc(100vh - var(--header-h)); overflow: hidden; }
+        .sidebar { width: var(--sidebar-w); background: var(--bg-dark); color: var(--text-light); display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 100; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 12px; }
+        .sidebar-section { margin-bottom: 20px; }
+        .sidebar-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; padding-left: 4px; }
+        .sidebar-btn { width: 100%; background: rgba(255,255,255,0.05); border: none; color: var(--text-light); padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; transition: all 0.2s; text-align: left; }
+        .sidebar-btn:hover { background: rgba(255,255,255,0.12); }
+        .sidebar-btn i { width: 20px; text-align: center; color: var(--secondary); }
+        .sidebar-btn.active { background: var(--secondary); }
+        .sidebar-btn.active i { color: white; }
+        .var-list { max-height: 300px; overflow-y: auto; }
+        .var-item { padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); margin-bottom: 4px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .var-item:hover { background: rgba(255,255,255,0.08); }
+        .var-item.selected { background: var(--secondary); }
+        .var-type-icon { font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,0.15); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-white); }
+        .content-tabs { display: flex; background: var(--bg-light); border-bottom: 1px solid var(--border); padding: 0 16px; gap: 4px; }
+        .tab-btn { padding: 10px 20px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .tab-btn:hover { color: var(--text-dark); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg-white); }
+        .tab-panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+        .tab-panel.active { display: flex; }
+        .data-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--bg-light); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .toolbar-btn { background: var(--bg-white); border: 1px solid var(--border); padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .toolbar-btn:hover { background: var(--bg-light); border-color: var(--secondary); }
+        .toolbar-btn.primary { background: var(--secondary); color: white; border-color: var(--secondary); }
+        .toolbar-btn.primary:hover { background: var(--primary); }
+        .toolbar-btn.danger { background: var(--accent); color: white; border-color: var(--accent); }
+        .toolbar-btn.danger:hover { background: var(--accent-hover); }
+        .toolbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+        .toolbar-info { margin-left: auto; font-size: 0.8rem; color: var(--text-muted); }
+        .data-table-container { flex: 1; overflow: auto; position: relative; }
+        .data-table { border-collapse: collapse; width: 100%; min-width: 600px; }
+        .data-table th { background: var(--bg-dark); color: var(--text-light); padding: 10px 12px; text-align: left; font-size: 0.8rem; font-weight: 600; position: sticky; top: 0; z-index: 10; white-space: nowrap; cursor: pointer; user-select: none; }
+        .data-table th:hover { background: var(--primary); }
+        .data-table th .col-type { font-size: 0.7rem; font-weight: 400; opacity: 0.7; margin-left: 4px; }
+        .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); font-size: 0.85rem; white-space: nowrap; }
+        .data-table tr:hover td { background: rgba(41, 128, 185, 0.05); }
+        .data-table tr:nth-child(even) td { background: rgba(236, 240, 241, 0.5); }
+        .data-table tr:nth-child(even):hover td { background: rgba(41, 128, 185, 0.08); }
+        .data-table td input { width: 100%; border: none; background: transparent; font-size: 0.85rem; padding: 4px; outline: none; }
+        .data-table td input:focus { background: white; box-shadow: 0 0 0 2px var(--secondary); border-radius: 3px; }
+        .row-num { color: var(--text-muted); font-size: 0.75rem; text-align: center; background: var(--bg-light) !important; font-weight: 600; width: 50px; min-width: 50px; }
+        .var-table-container { flex: 1; overflow: auto; }
+        .var-table { width: 100%; border-collapse: collapse; }
+        .var-table th { background: var(--bg-dark); color: var(--text-light); padding: 10px; text-align: left; font-size: 0.8rem; position: sticky; top: 0; }
+        .var-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); font-size: 0.85rem; }
+        .var-table tr:hover td { background: rgba(41, 128, 185, 0.05); }
+        .var-table input, .var-table select, .var-table textarea { width: 100%; border: 1px solid var(--border); padding: 5px 8px; border-radius: var(--radius-sm); font-size: 0.85rem; outline: none; }
+        .var-table input:focus, .var-table select:focus, .var-table textarea:focus { border-color: var(--secondary); box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.2); }
+        .output-container { flex: 1; overflow: auto; padding: 20px; background: var(--bg-white); }
+        .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
+        .output-title { font-size: 1.1rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .output-actions { display: flex; gap: 8px; }
+        .output-section { margin-bottom: 24px; background: var(--bg-light); border-radius: var(--radius); padding: 16px; border-left: 4px solid var(--secondary); }
+        .output-section-title { font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .output-table { width: 100%; border-collapse: collapse; background: white; border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow); }
+        .output-table th { background: var(--bg-dark); color: white; padding: 10px; text-align: center; font-size: 0.8rem; font-weight: 600; }
+        .output-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border-light); font-size: 0.85rem; }
+        .output-table tr:last-child td { border-bottom: none; }
+        .output-table tr:hover td { background: rgba(41, 128, 185, 0.05); }
+        .output-table td:first-child { text-align: left; font-weight: 600; }
+        .stat-value { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9rem; }
+        .p-sig { color: var(--accent); font-weight: 700; }
+        .p-ns { color: var(--text-muted); }
+        .syntax-container { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; }
+        .syntax-toolbar { display: flex; gap: 8px; padding: 8px 16px; background: #252526; border-bottom: 1px solid #333; }
+        .syntax-btn { background: #3c3c3c; border: 1px solid #555; color: #ccc; padding: 6px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .syntax-btn:hover { background: #4c4c4c; }
+        .syntax-editor { flex: 1; padding: 16px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9rem; line-height: 1.6; color: #d4d4d4; background: #1e1e1e; border: none; outline: none; resize: none; white-space: pre; overflow: auto; }
+        .syntax-output { height: var(--syntax-h); background: #252526; border-top: 1px solid #333; padding: 12px 16px; font-family: 'Consolas', monospace; font-size: 0.85rem; color: #ccc; overflow: auto; }
+        .syntax-output .success { color: #4ec9b0; }
+        .syntax-output .error { color: #f48771; }
+        .syntax-output .info { color: #9cdcfe; }
+        .charts-container { flex: 1; overflow: auto; padding: 20px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .chart-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+        .chart-card-title { font-size: 0.95rem; font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .chart-wrapper { position: relative; height: 300px; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 90%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; animation: modalIn 0.2s ease; }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal-header { padding: 16px 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; }
+        .modal-close { background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+        .modal-close:hover { opacity: 1; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 12px 20px; background: var(--bg-light); display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border); }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-dark); }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.15); }
+        .form-textarea { min-height: 80px; resize: vertical; }
+        .form-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+        .btn { padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: var(--primary); }
+        .btn-secondary { background: var(--bg-light); color: var(--text-dark); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border-light); }
+        .btn-danger { background: var(--accent); color: white; }
+        .btn-danger:hover { background: var(--accent-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .var-selector { border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 200px; overflow-y: auto; padding: 8px; }
+        .var-checkbox { display: flex; align-items: center; gap: 8px; padding: 6px; cursor: pointer; border-radius: var(--radius-sm); transition: background 0.15s; }
+        .var-checkbox:hover { background: var(--bg-light); }
+        .var-checkbox input { cursor: pointer; }
+        .toast-container { position: fixed; top: 70px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: white; border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 12px 18px; display: flex; align-items: center; gap: 10px; min-width: 280px; animation: toastIn 0.3s ease; border-left: 4px solid var(--secondary); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--accent); }
+        .toast.warning { border-left-color: var(--warning); }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        .toast-icon { font-size: 1.1rem; }
+        .toast.success .toast-icon { color: var(--success); }
+        .toast.error .toast-icon { color: var(--accent); }
+        .toast.warning .toast-icon { color: var(--warning); }
+        .toast-message { font-size: 0.9rem; flex: 1; }
+        .toast-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 2500; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+        .loading-overlay.active { display: flex; }
+        .spinner { width: 48px; height: 48px; border: 4px solid var(--border-light); border-top-color: var(--secondary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: var(--text-dark); font-weight: 600; }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); text-align: center; padding: 40px; }
+        .empty-state i { font-size: 4rem; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state h3 { font-size: 1.3rem; margin-bottom: 8px; color: var(--text-dark); }
+        .empty-state p { font-size: 0.9rem; max-width: 400px; }
+        .file-input { display: none; }
+        .analysis-config { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .config-section { border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 12px; }
+        .config-section-title { font-size: 0.8rem; font-weight: 700; color: var(--primary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dataset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+        .dataset-card { border: 2px solid var(--border-light); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .dataset-card:hover { border-color: var(--secondary); background: rgba(41, 128, 185, 0.03); }
+        .dataset-card.active { border-color: var(--secondary); background: rgba(41, 128, 185, 0.08); }
+        .dataset-card i { font-size: 2rem; color: var(--secondary); margin-bottom: 8px; }
+        .dataset-card-name { font-weight: 600; font-size: 0.9rem; }
+        .dataset-card-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        @media (max-width: 1024px) { .sidebar { position: fixed; left: 0; top: var(--header-h); bottom: 0; transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .mobile-toggle { display: block; } .main-content { margin-left: 0; } .charts-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .main-menu { display: none; } .header-actions { gap: 4px; } .header-btn span { display: none; } .header-btn { padding: 8px; } .content-tabs { padding: 0 8px; } .tab-btn { padding: 8px 12px; font-size: 0.8rem; } .tab-btn span { display: none; } .data-toolbar { padding: 8px; } .toolbar-info { display: none; } .modal { width: 95%; } .output-table { font-size: 0.75rem; } .output-table th, .output-table td { padding: 6px; } .analysis-config { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv,.db,.sqlite,.sqlite3" onchange="handleFileImport(event)">
+
+    <header class="app-header">
+        <button class="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="app-logo"><i class="fas fa-chart-line"></i><span>StatView Pro</span></div>
+        <nav class="main-menu">
+            <div class="menu-item"><i class="fas fa-file"></i> Archivo
+                <div class="dropdown">
+                    <div class="dropdown-item" onclick="showNewDatasetDialog()"><i class="fas fa-plus"></i> Nuevo Dataset</div>
+                    <div class="dropdown-item" onclick="document.getElementById('fileInput').click()"><i class="fas fa-file-import"></i> Importar Excel/CSV...</div>
+                    <div class="dropdown-item" onclick="showImportSQLDialog()"><i class="fas fa-database"></i> Importar SQLite...</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Exportar a Excel</div>
+                    <div class="dropdown-item" onclick="exportToCSV()"><i class="fas fa-file-csv"></i> Exportar a CSV</div>
+                    <div class="dropdown-item" onclick="exportSQLite()"><i class="fas fa-database"></i> Exportar SQLite</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" onclick="loadDemoData()"><i class="fas fa-flask"></i> Cargar Datos Demo</div>
+                </div>
+            </div>
+            <div class="menu-item"><i class="fas fa-edit"></i> Editar
+                <div class="dropdown">
+                    <div class="dropdown-item" onclick="addRow()"><i class="fas fa-plus"></i> Agregar Fila</div>
+                    <div class="dropdown-item" onclick="addColumn()"><i class="fas fa-columns"></i> Agregar Columna</div>
+                    <div class="dropdown-item" onclick="deleteSelectedRows()"><i class="fas fa-trash"></i> Eliminar Filas Seleccionadas</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" onclick="showTransformDialog()"><i class="fas fa-calculator"></i> Transformar Variable...</div>
+                </div>
+            </div>
+            <div class="menu-item"><i class="fas fa-chart-bar"></i> Analizar
+                <div class="dropdown">
+                    <div class="dropdown-header">Descriptivos</div>
+                    <div class="dropdown-item" onclick="showDescriptivesDialog()"><i class="fas fa-list-ol"></i> Estadísticos Descriptivos</div>
+                    <div class="dropdown-item" onclick="showFrequenciesDialog()"><i class="fas fa-chart-pie"></i> Frecuencias</div>
+                    <div class="dropdown-item" onclick="showCrosstabsDialog()"><i class="fas fa-table"></i> Tablas de Contingencia</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header">Comparar Medias</div>
+                    <div class="dropdown-item" onclick="showTTestDialog()"><i class="fas fa-balance-scale"></i> T-Test</div>
+                    <div class="dropdown-item" onclick="showANOVADialog()"><i class="fas fa-layer-group"></i> ANOVA Unidireccional</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header">Correlación y Regresión</div>
+                    <div class="dropdown-item" onclick="showCorrelationDialog()"><i class="fas fa-project-diagram"></i> Correlaciones</div>
+                    <div class="dropdown-item" onclick="showRegressionDialog()"><i class="fas fa-chart-line"></i> Regresión Lineal</div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-header">No Paramétricos</div>
+                    <div class="dropdown-item" onclick="showChiSquareDialog()"><i class="fas fa-check-square"></i> Chi-Cuadrado</div>
+                </div>
+            </div>
+            <div class="menu-item"><i class="fas fa-paint-brush"></i> Gráficos
+                <div class="dropdown">
+                    <div class="dropdown-item" onclick="generateChart('histogram')"><i class="fas fa-chart-bar"></i> Histograma</div>
+                    <div class="dropdown-item" onclick="generateChart('boxplot')"><i class="fas fa-box"></i> Boxplot</div>
+                    <div class="dropdown-item" onclick="generateChart('scatter')"><i class="fas fa-braille"></i> Dispersión</div>
+                    <div class="dropdown-item" onclick="generateChart('bar')"><i class="fas fa-chart-column"></i> Barras</div>
+                    <div class="dropdown-item" onclick="generateChart('pie')"><i class="fas fa-chart-pie"></i> Pastel</div>
+                    <div class="dropdown-item" onclick="generateChart('line')"><i class="fas fa-chart-line"></i> Líneas</div>
+                </div>
+            </div>
+            <div class="menu-item"><i class="fas fa-terminal"></i> Sintaxis
+                <div class="dropdown">
+                    <div class="dropdown-item" onclick="switchTab('syntax')"><i class="fas fa-code"></i> Editor de Sintaxis</div>
+                    <div class="dropdown-item" onclick="runAllSyntax()"><i class="fas fa-play"></i> Ejecutar Todo</div>
+                    <div class="dropdown-item" onclick="clearSyntaxOutput()"><i class="fas fa-eraser"></i> Limpiar Output</div>
+                </div>
+            </div>
+        </nav>
+        <div class="header-actions">
+            <span class="dataset-badge" id="datasetBadge">Sin datos</span>
+            <button class="header-btn" onclick="showDatasetsDialog()" title="Datasets"><i class="fas fa-database"></i><span>Datasets</span></button>
+            <button class="header-btn" onclick="showHelpDialog()" title="Ayuda"><i class="fas fa-question-circle"></i></button>
+        </div>
+    </header>
+
+    <div class="app-body">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header"><i class="fas fa-sliders-h"></i> Panel de Análisis</div>
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Acciones Rápidas</div>
+                    <button class="sidebar-btn" onclick="showDescriptivesDialog()"><i class="fas fa-list-ol"></i> Descriptivos</button>
+                    <button class="sidebar-btn" onclick="showFrequenciesDialog()"><i class="fas fa-chart-pie"></i> Frecuencias</button>
+                    <button class="sidebar-btn" onclick="showCorrelationDialog()"><i class="fas fa-project-diagram"></i> Correlaciones</button>
+                    <button class="sidebar-btn" onclick="showRegressionDialog()"><i class="fas fa-chart-line"></i> Regresión</button>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Variables del Dataset</div>
+                    <div class="var-list" id="sidebarVarList"><div style="color: var(--text-muted); font-size: 0.85rem; padding: 8px;">No hay datos cargados</div></div>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Gráficos Rápidos</div>
+                    <button class="sidebar-btn" onclick="generateChart('histogram')"><i class="fas fa-chart-bar"></i> Histograma</button>
+                    <button class="sidebar-btn" onclick="generateChart('scatter')"><i class="fas fa-braille"></i> Dispersión</button>
+                    <button class="sidebar-btn" onclick="generateChart('boxplot')"><i class="fas fa-box"></i> Boxplot</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="content-tabs">
+                <button class="tab-btn active" onclick="switchTab('data')" data-tab="data"><i class="fas fa-table"></i><span>Vista de Datos</span></button>
+                <button class="tab-btn" onclick="switchTab('variables')" data-tab="variables"><i class="fas fa-tags"></i><span>Vista de Variables</span></button>
+                <button class="tab-btn" onclick="switchTab('output')" data-tab="output"><i class="fas fa-file-alt"></i><span>Output</span></button>
+                <button class="tab-btn" onclick="switchTab('charts')" data-tab="charts"><i class="fas fa-chart-area"></i><span>Gráficos</span></button>
+                <button class="tab-btn" onclick="switchTab('syntax')" data-tab="syntax"><i class="fas fa-code"></i><span>Sintaxis</span></button>
+            </div>
+
+            <div class="tab-panel active" id="panel-data">
+                <div class="data-toolbar">
+                    <button class="toolbar-btn primary" onclick="document.getElementById('fileInput').click()"><i class="fas fa-file-import"></i> Importar</button>
+                    <button class="toolbar-btn" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="toolbar-btn" onclick="exportToCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+                    <div class="toolbar-sep"></div>
+                    <button class="toolbar-btn" onclick="addRow()"><i class="fas fa-plus"></i> Fila</button>
+                    <button class="toolbar-btn" onclick="addColumn()"><i class="fas fa-columns"></i> Columna</button>
+                    <button class="toolbar-btn danger" onclick="clearData()"><i class="fas fa-trash"></i> Limpiar</button>
+                    <div class="toolbar-sep"></div>
+                    <button class="toolbar-btn" onclick="showDescriptivesDialog()"><i class="fas fa-list-ol"></i> Descriptivos</button>
+                    <div class="toolbar-info" id="dataInfo">0 filas × 0 columnas</div>
+                </div>
+                <div class="data-table-container" id="dataTableContainer">
+                    <div class="empty-state"><i class="fas fa-database"></i><h3>Sin datos cargados</h3><p>Importa un archivo Excel/CSV o usa el menú Archivo > Cargar Datos Demo para comenzar.</p></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="panel-variables">
+                <div class="data-toolbar">
+                    <button class="toolbar-btn primary" onclick="saveVariableChanges()"><i class="fas fa-save"></i> Guardar Cambios</button>
+                    <button class="toolbar-btn" onclick="autoDetectTypes()"><i class="fas fa-magic"></i> Auto-detectar Tipos</button>
+                </div>
+                <div class="var-table-container">
+                    <table class="var-table" id="varTable">
+                        <thead><tr><th>Nombre</th><th>Tipo</th><th>Ancho</th><th>Decimales</th><th>Etiqueta</th><th>Valores</th><th>Medida</th><th>Acciones</th></tr></thead>
+                        <tbody id="varTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="panel-output">
+                <div class="data-toolbar">
+                    <button class="toolbar-btn" onclick="clearOutput()"><i class="fas fa-eraser"></i> Limpiar Output</button>
+                    <button class="toolbar-btn" onclick="exportOutputToHTML()"><i class="fas fa-file-export"></i> Exportar HTML</button>
+                </div>
+                <div class="output-container" id="outputContainer">
+                    <div class="empty-state"><i class="fas fa-chart-bar"></i><h3>Sin resultados</h3><p>Ejecuta un análisis estadístico para ver los resultados aquí.</p></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="panel-charts">
+                <div class="data-toolbar">
+                    <button class="toolbar-btn" onclick="clearCharts()"><i class="fas fa-eraser"></i> Limpiar Gráficos</button>
+                    <button class="toolbar-btn" onclick="exportCharts()"><i class="fas fa-image"></i> Exportar PNG</button>
+                </div>
+                <div class="charts-container" id="chartsContainer">
+                    <div class="empty-state"><i class="fas fa-chart-area"></i><h3>Sin gráficos</h3><p>Genera gráficos desde el menú Gráficos o el panel lateral.</p></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="panel-syntax">
+                <div class="syntax-container">
+                    <div class="syntax-toolbar">
+                        <button class="syntax-btn" onclick="runAllSyntax()"><i class="fas fa-play"></i> Ejecutar</button>
+                        <button class="syntax-btn" onclick="clearSyntax()"><i class="fas fa-eraser"></i> Limpiar</button>
+                        <button class="syntax-btn" onclick="saveSyntax()"><i class="fas fa-save"></i> Guardar</button>
+                        <button class="syntax-btn" onclick="loadSyntax()"><i class="fas fa-folder-open"></i> Cargar</button>
+                    </div>
+                    <textarea class="syntax-editor" id="syntaxEditor" placeholder="// Escribe comandos de sintaxis aquí...
+// Ejemplos:
+// DESCRIPTIVES var1 var2 var3
+// TTEST GROUPS=grupo(1 2) /VARIABLES=score
+// REGRESSION /DEPENDENT=y /METHOD=ENTER x1 x2
+// CORRELATIONS var1 var2 var3
+// FREQUENCIES var1
+// ANOVA score BY grupo"></textarea>
+                    <div class="syntax-output" id="syntaxOutput"><span class="info">// Output de sintaxis aparecerá aquí...</span></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="descriptivesModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-list-ol"></i> Estadísticos Descriptivos</span><button class="modal-close" onclick="closeModal('descriptivesModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Seleccionar Variables:</label><div class="var-selector" id="descVarSelector"></div></div>
+                <div class="analysis-config">
+                    <div class="config-section">
+                        <div class="config-section-title">Estadísticos</div>
+                        <label class="var-checkbox"><input type="checkbox" id="descMean" checked> Media</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descMedian" checked> Mediana</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descMode"> Moda</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descStd" checked> Desv. Estándar</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descVar"> Varianza</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descMinMax" checked> Mínimo / Máximo</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descRange"> Rango</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descSkew"> Asimetría</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descKurt"> Curtosis</label>
+                    </div>
+                    <div class="config-section">
+                        <div class="config-section-title">Percentiles</div>
+                        <label class="var-checkbox"><input type="checkbox" id="descQ1"> Q1 (25%)</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descQ3"> Q3 (75%)</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descIQR"> IQR</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descP5"> P5</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descP10"> P10</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descP90"> P90</label>
+                        <label class="var-checkbox"><input type="checkbox" id="descP95"> P95</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('descriptivesModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runDescriptives()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="ttestModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-balance-scale"></i> T-Test</span><button class="modal-close" onclick="closeModal('ttestModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Tipo de T-Test:</label><select class="form-select" id="ttestType" onchange="updateTTestUI()"><option value="one-sample">One-Sample</option><option value="independent">Independent Samples</option><option value="paired">Paired Samples</option></select></div>
+                <div class="form-group" id="ttestTestValueGroup"><label class="form-label">Valor de Prueba (μ₀):</label><input type="number" class="form-input" id="ttestTestValue" value="0" step="0.01"></div>
+                <div class="form-group" id="ttestVarGroup"><label class="form-label">Variable de Prueba:</label><select class="form-select" id="ttestVariable"></select></div>
+                <div class="form-group" id="ttestGroupVarGroup" style="display:none"><label class="form-label">Variable de Agrupación:</label><select class="form-select" id="ttestGroupVariable"></select></div>
+                <div class="form-group" id="ttestVar2Group" style="display:none"><label class="form-label">Segunda Variable (pareada):</label><select class="form-select" id="ttestVariable2"></select></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="ttestAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option><option value="0.001">0.001</option></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('ttestModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runTTest()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="anovaModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-layer-group"></i> ANOVA Unidireccional</span><button class="modal-close" onclick="closeModal('anovaModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable Dependiente:</label><select class="form-select" id="anovaDV"></select></div>
+                <div class="form-group"><label class="form-label">Variable de Factor:</label><select class="form-select" id="anovaFactor"></select></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="anovaAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('anovaModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runANOVA()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="correlationModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-project-diagram"></i> Correlaciones</span><button class="modal-close" onclick="closeModal('correlationModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Seleccionar Variables:</label><div class="var-selector" id="corrVarSelector"></div></div>
+                <div class="form-group"><label class="form-label">Coeficiente:</label><select class="form-select" id="corrType"><option value="pearson">Pearson</option><option value="spearman">Spearman</option></select></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="corrAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('correlationModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runCorrelation()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="regressionModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-chart-line"></i> Regresión Lineal</span><button class="modal-close" onclick="closeModal('regressionModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable Dependiente (Y):</label><select class="form-select" id="regDV"></select></div>
+                <div class="form-group"><label class="form-label">Variables Independientes (X):</label><div class="var-selector" id="regIVSelector"></div></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="regAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('regressionModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runRegression()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chisqModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-check-square"></i> Chi-Cuadrado</span><button class="modal-close" onclick="closeModal('chisqModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable 1 (Filas):</label><select class="form-select" id="chisqVar1"></select></div>
+                <div class="form-group"><label class="form-label">Variable 2 (Columnas):</label><select class="form-select" id="chisqVar2"></select></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="chisqAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('chisqModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runChiSquare()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="frequenciesModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-chart-pie"></i> Frecuencias</span><button class="modal-close" onclick="closeModal('frequenciesModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Seleccionar Variables:</label><div class="var-selector" id="freqVarSelector"></div></div>
+                <div class="form-group">
+                    <label class="var-checkbox"><input type="checkbox" id="freqTable" checked> Tabla de frecuencias</label>
+                    <label class="var-checkbox"><input type="checkbox" id="freqPerc" checked> Porcentajes</label>
+                    <label class="var-checkbox"><input type="checkbox" id="freqCum"> Frecuencias acumuladas</label>
+                    <label class="var-checkbox"><input type="checkbox" id="freqBar"> Gráfico de barras</label>
+                    <label class="var-checkbox"><input type="checkbox" id="freqPie"> Gráfico de pastel</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('frequenciesModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runFrequencies()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="crosstabsModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-table"></i> Tablas de Contingencia</span><button class="modal-close" onclick="closeModal('crosstabsModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable Filas:</label><select class="form-select" id="crossRow"></select></div>
+                <div class="form-group"><label class="form-label">Variable Columnas:</label><select class="form-select" id="crossCol"></select></div>
+                <div class="form-group">
+                    <label class="var-checkbox"><input type="checkbox" id="crossChi" checked> Chi-cuadrado</label>
+                    <label class="var-checkbox"><input type="checkbox" id="crossPerc" checked> Porcentajes</label>
+                    <label class="var-checkbox"><input type="checkbox" id="crossExp"> Frecuencias esperadas</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('crosstabsModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runCrosstabs()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="transformModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-calculator"></i> Transformar Variable</span><button class="modal-close" onclick="closeModal('transformModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable Origen:</label><select class="form-select" id="transSource"></select></div>
+                <div class="form-group"><label class="form-label">Nuevo Nombre:</label><input type="text" class="form-input" id="transTarget" placeholder="Ej: var_log"></div>
+                <div class="form-group"><label class="form-label">Transformación:</label><select class="form-select" id="transType"><option value="log">Logaritmo natural (ln)</option><option value="log10">Logaritmo base 10</option><option value="sqrt">Raíz cuadrada</option><option value="square">Cuadrado (x²)</option><option value="reciprocal">Recíproco (1/x)</option><option value="zscore">Z-Score (estandarizar)</option><option value="abs">Valor absoluto</option><option value="custom">Fórmula personalizada</option></select></div>
+                <div class="form-group" id="transFormulaGroup" style="display:none"><label class="form-label">Fórmula (use 'x' para la variable):</label><input type="text" class="form-input" id="transFormula" placeholder="Ej: x * 2 + 5"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('transformModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runTransform()"><i class="fas fa-play"></i> Aplicar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="datasetsModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-database"></i> Gestión de Datasets</span><button class="modal-close" onclick="closeModal('datasetsModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Datasets Disponibles:</label><div class="dataset-grid" id="datasetGrid"></div></div>
+                <div class="form-group"><label class="form-label">O crear nuevo:</label><input type="text" class="form-input" id="newDatasetName" placeholder="Nombre del dataset..."></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('datasetsModal')">Cerrar</button>
+                <button class="btn btn-success" onclick="createNewDataset()"><i class="fas fa-plus"></i> Crear Nuevo</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chartModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-chart-area"></i> Configurar Gráfico</span><button class="modal-close" onclick="closeModal('chartModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Tipo de Gráfico:</label><select class="form-select" id="chartTypeSelect"><option value="histogram">Histograma</option><option value="boxplot">Boxplot</option><option value="scatter">Dispersión</option><option value="bar">Barras</option><option value="pie">Pastel</option><option value="line">Líneas</option></select></div>
+                <div class="form-group"><label class="form-label">Variable X:</label><select class="form-select" id="chartVarX"></select></div>
+                <div class="form-group"><label class="form-label">Variable Y (opcional):</label><select class="form-select" id="chartVarY"><option value="">-- Ninguna --</option></select></div>
+                <div class="form-group"><label class="form-label">Variable de Agrupación (opcional):</label><select class="form-select" id="chartGroup"><option value="">-- Ninguna --</option></select></div>
+                <div class="form-group"><label class="form-label">Título:</label><input type="text" class="form-input" id="chartTitle" placeholder="Título del gráfico..."></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('chartModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="createChartFromModal()"><i class="fas fa-play"></i> Generar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-question-circle"></i> Ayuda - StatView Pro</span><button class="modal-close" onclick="closeModal('helpModal')">&times;</button></div>
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <h3 style="color: var(--primary); margin-bottom: 12px;">Bienvenido a StatView Pro</h3>
+                <p style="margin-bottom: 16px; line-height: 1.6;">StatView Pro es una aplicación de análisis estadístico completa inspirada en SPSS, que funciona completamente en tu navegador usando SQLite como motor de base de datos.</p>
+                <h4 style="color: var(--primary); margin: 16px 0 8px;">Comandos de Sintaxis</h4>
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.8;">
+                    <div><b>DESCRIPTIVES</b> var1 var2 var3</div>
+                    <div><b>FREQUENCIES</b> var1</div>
+                    <div><b>TTEST</b> GROUPS=grupo(1 2) /VARIABLES=score</div>
+                    <div><b>ANOVA</b> score BY grupo</div>
+                    <div><b>CORRELATIONS</b> var1 var2 var3</div>
+                    <div><b>REGRESSION</b> /DEPENDENT=y /METHOD=ENTER x1 x2</div>
+                    <div><b>CROSSTABS</b> var1 BY var2</div>
+                    <div><b>CHISQUARE</b> var1 var2</div>
+                </div>
+                <h4 style="color: var(--primary); margin: 16px 0 8px;">Atajos de Teclado</h4>
+                <div style="font-size: 0.9rem; line-height: 1.8;">
+                    <div><kbd>Ctrl+O</kbd> - Importar archivo</div>
+                    <div><kbd>Ctrl+S</kbd> - Exportar a Excel</div>
+                    <div><kbd>Ctrl+R</kbd> - Ejecutar sintaxis</div>
+                    <div><kbd>Ctrl+1</kbd> - Vista de Datos</div>
+                    <div><kbd>Ctrl+2</kbd> - Vista de Variables</div>
+                    <div><kbd>Ctrl+3</kbd> - Output</div>
+                    <div><kbd>Ctrl+4</kbd> - Gráficos</div>
+                    <div><kbd>Ctrl+5</kbd> - Sintaxis</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('helpModal')">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Procesando...</div>
+    </div>
+
+<script>
+// ==================== APP STATE ====================
+const AppState = {
+    db: null,
+    SQL: null,
+    currentDataset: null,
+    datasets: {},
+    variables: [],
+    data: [],
+    outputHistory: [],
+    charts: [],
+    chartInstances: {},
+    selectedRows: new Set(),
+    editedCells: new Map(),
+    syntaxHistory: []
+};
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', async () => {
+    showLoading('Inicializando SQLite...');
+    try {
+        // Initialize SQL.js
+        const SQL = await initSqlJs({
+            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`
+        });
+        AppState.SQL = SQL;
+        AppState.db = new SQL.Database();
+
+        // Create default dataset
+        createDataset('Dataset1');
+
+        hideLoading();
+        showToast('StatView Pro listo. Importa datos o carga datos demo.', 'success');
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', handleKeyboard);
+
+        // Setup transform dialog listener
+        document.getElementById('transType').addEventListener('change', function() {
+            document.getElementById('transFormulaGroup').style.display = 
+                this.value === 'custom' ? 'block' : 'none';
+        });
+
+    } catch (err) {
+        hideLoading();
+        showToast('Error al inicializar SQLite: ' + err.message, 'error');
+        console.error(err);
+    }
+});
+
+// ==================== DATASET MANAGEMENT ====================
+function createDataset(name) {
+    const safeName = name.replace(/[^a-zA-Z0-9_]/g, '_');
+    if (AppState.datasets[safeName]) {
+        showToast(`El dataset "${name}" ya existe`, 'warning');
+        return;
+    }
+    AppState.datasets[safeName] = {
+        name: safeName,
+        displayName: name,
+        variables: [],
+        data: [],
+        rowCount: 0,
+        colCount: 0
+    };
+    AppState.currentDataset = safeName;
+    updateDatasetBadge();
+    updateSidebarVars();
+    showToast(`Dataset "${name}" creado`, 'success');
+}
+
+function switchDataset(name) {
+    if (!AppState.datasets[name]) return;
+    AppState.currentDataset = name;
+    const ds = AppState.datasets[name];
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+    updateDatasetBadge();
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    showToast(`Dataset activo: ${ds.displayName}`, 'success');
+}
+
+function updateDatasetBadge() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    const badge = document.getElementById('datasetBadge');
+    if (ds && ds.rowCount > 0) {
+        badge.textContent = `${ds.displayName} (${ds.rowCount}×${ds.colCount})`;
+        badge.style.background = 'var(--success)';
+    } else {
+        badge.textContent = ds ? ds.displayName : 'Sin datos';
+        badge.style.background = 'var(--warning)';
+    }
+}
+
+// ==================== SQLITE OPERATIONS ====================
+function execSQL(sql, params = []) {
+    if (!AppState.db) return [];
+    try {
+        const stmt = AppState.db.prepare(sql);
+        if (params.length > 0) stmt.bind(params);
+        const results = [];
+        while (stmt.step()) {
+            results.push(stmt.getAsObject());
+        }
+        stmt.free();
+        return results;
+    } catch (e) {
+        console.error('SQL Error:', e.message, 'SQL:', sql);
+        throw e;
+    }
+}
+
+function execSQLRun(sql) {
+    if (!AppState.db) return;
+    AppState.db.run(sql);
+}
+
+function syncToSQLite() {
+    if (!AppState.currentDataset) return;
+    const ds = AppState.datasets[AppState.currentDataset];
+    const tableName = ds.name;
+
+    // Drop existing table
+    try { execSQLRun(`DROP TABLE IF EXISTS "${tableName}"`); } catch(e) {}
+
+    if (ds.variables.length === 0) return;
+
+    // Create table
+    const colDefs = ds.variables.map(v => {
+        let type = 'TEXT';
+        if (v.type === 'numeric') type = 'REAL';
+        else if (v.type === 'integer') type = 'INTEGER';
+        return `"${v.name}" ${type}`;
+    }).join(', ');
+
+    execSQLRun(`CREATE TABLE "${tableName}" (${colDefs})`);
+
+    // Insert data
+    if (ds.data.length > 0) {
+        const placeholders = ds.variables.map(() => '?').join(',');
+        const stmt = AppState.db.prepare(`INSERT INTO "${tableName}" VALUES (${placeholders})`);
+        for (const row of ds.data) {
+            stmt.run(row.map((val, i) => {
+                if (val === '' || val === null || val === undefined) return null;
+                const v = ds.variables[i];
+                if (v.type === 'numeric' || v.type === 'integer') return parseFloat(val);
+                return String(val);
+            }));
+        }
+        stmt.free();
+    }
+}
+
+function syncFromSQLite() {
+    if (!AppState.currentDataset) return;
+    const ds = AppState.datasets[AppState.currentDataset];
+    const tableName = ds.name;
+
+    try {
+        const rows = execSQL(`SELECT * FROM "${tableName}"`);
+        if (rows.length === 0) return;
+
+        const cols = Object.keys(rows[0]);
+        ds.data = rows.map(r => cols.map(c => r[c]));
+        ds.rowCount = ds.data.length;
+
+        // Update variables if needed
+        if (ds.variables.length === 0) {
+            ds.variables = cols.map(c => ({
+                name: c, type: 'numeric', width: 8, decimals: 2,
+                label: c, values: '', measure: 'scale'
+            }));
+        }
+
+        AppState.variables = [...ds.variables];
+        AppState.data = ds.data.map(r => [...r]);
+
+    } catch (e) {
+        console.log('No SQLite data to sync');
+    }
+}
+
+// ==================== DATA TABLE RENDERING ====================
+function renderDataTable() {
+    const container = document.getElementById('dataTableContainer');
+    const ds = AppState.datasets[AppState.currentDataset];
+
+    if (!ds || ds.variables.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-database"></i><h3>Sin datos cargados</h3><p>Importa un archivo Excel/CSV o usa el menú Archivo > Cargar Datos Demo para comenzar.</p></div>`;
+        return;
+    }
+
+    let html = '<table class="data-table" id="mainDataTable"><thead><tr><th class="row-num">#</th>';
+    ds.variables.forEach((v, i) => {
+        html += `<th data-col="${i}">${escapeHtml(v.name)}<span class="col-type">(${v.type})</span></th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    ds.data.forEach((row, ri) => {
+        html += `<tr data-row="${ri}"><td class="row-num">${ri + 1}</td>`;
+        row.forEach((val, ci) => {
+            const displayVal = val === null || val === undefined ? '' : escapeHtml(String(val));
+            html += `<td data-row="${ri}" data-col="${ci}"><input type="text" value="${displayVal}" onchange="updateCell(${ri}, ${ci}, this.value)" onkeydown="navigateCell(event, ${ri}, ${ci})"></td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function renderVarTable() {
+    const tbody = document.getElementById('varTableBody');
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || ds.variables.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">No hay variables definidas</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = ds.variables.map((v, i) => `
+        <tr>
+            <td><input type="text" value="${escapeHtml(v.name)}" id="var-name-${i}"></td>
+            <td><select id="var-type-${i}"><option value="numeric" ${v.type==='numeric'?'selected':''}>Numérico</option><option value="integer" ${v.type==='integer'?'selected':''}>Entero</option><option value="string" ${v.type==='string'?'selected':''}>Cadena</option><option value="date" ${v.type==='date'?'selected':''}>Fecha</option></select></td>
+            <td><input type="number" value="${v.width}" id="var-width-${i}" min="1" max="50"></td>
+            <td><input type="number" value="${v.decimals}" id="var-decimals-${i}" min="0" max="10"></td>
+            <td><input type="text" value="${escapeHtml(v.label)}" id="var-label-${i}"></td>
+            <td><input type="text" value="${escapeHtml(v.values)}" id="var-values-${i}" placeholder="1=Masculino, 2=Femenino"></td>
+            <td><select id="var-measure-${i}"><option value="nominal" ${v.measure==='nominal'?'selected':''}>Nominal</option><option value="ordinal" ${v.measure==='ordinal'?'selected':''}>Ordinal</option><option value="scale" ${v.measure==='scale'?'selected':''}>Escala</option></select></td>
+            <td><button class="toolbar-btn danger" onclick="deleteVariable(${i})" style="padding:4px 8px;font-size:0.75rem"><i class="fas fa-trash"></i></button></td>
+        </tr>
+    `).join('');
+}
+
+function updateSidebarVars() {
+    const list = document.getElementById('sidebarVarList');
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || ds.variables.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 8px;">No hay datos cargados</div>';
+        return;
+    }
+    list.innerHTML = ds.variables.map(v => `
+        <div class="var-item" onclick="selectVarForAnalysis('${escapeHtml(v.name)}')">
+            <i class="fas fa-${v.type==='string'?'font':v.type==='date'?'calendar':'hashtag'}"></i>
+            <span style="flex:1">${escapeHtml(v.name)}</span>
+            <span class="var-type-icon">${v.type.substring(0,3)}</span>
+        </div>
+    `).join('');
+}
+
+function updateDataInfo() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    document.getElementById('dataInfo').textContent = ds ? 
+        `${ds.rowCount} filas × ${ds.colCount} columnas` : '0 filas × 0 columnas';
+}
+
+function updateCell(row, col, value) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+    ds.data[row][col] = value;
+    AppState.data = ds.data.map(r => [...r]);
+    syncToSQLite();
+}
+
+function navigateCell(e, row, col) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+    const numCols = ds.variables.length;
+    const numRows = ds.data.length;
+    let newRow = row, newCol = col;
+
+    if (e.key === 'ArrowDown' && row < numRows - 1) newRow++;
+    else if (e.key === 'ArrowUp' && row > 0) newRow--;
+    else if (e.key === 'ArrowRight' && col < numCols - 1) newCol++;
+    else if (e.key === 'ArrowLeft' && col > 0) newCol--;
+    else if (e.key === 'Tab' && !e.shiftKey && col < numCols - 1) { newCol++; e.preventDefault(); }
+    else if (e.key === 'Tab' && e.shiftKey && col > 0) { newCol--; e.preventDefault(); }
+    else return;
+
+    const input = document.querySelector(`td[data-row="${newRow}"][data-col="${newCol}"] input`);
+    if (input) { input.focus(); input.select(); }
+}
+
+// ==================== VARIABLE MANAGEMENT ====================
+function saveVariableChanges() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+
+    ds.variables.forEach((v, i) => {
+        const newName = document.getElementById(`var-name-${i}`)?.value?.trim();
+        if (newName) v.name = newName;
+        v.type = document.getElementById(`var-type-${i}`)?.value || v.type;
+        v.width = parseInt(document.getElementById(`var-width-${i}`)?.value) || v.width;
+        v.decimals = parseInt(document.getElementById(`var-decimals-${i}`)?.value) || v.decimals;
+        v.label = document.getElementById(`var-label-${i}`)?.value || v.label;
+        v.values = document.getElementById(`var-values-${i}`)?.value || v.values;
+        v.measure = document.getElementById(`var-measure-${i}`)?.value || v.measure;
+    });
+
+    AppState.variables = [...ds.variables];
+    syncToSQLite();
+    renderDataTable();
+    updateSidebarVars();
+    showToast('Cambios en variables guardados', 'success');
+}
+
+function autoDetectTypes() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || ds.data.length === 0) return;
+
+    ds.variables.forEach((v, ci) => {
+        let allNumeric = true, allInteger = true, allDate = true;
+        let nonEmptyCount = 0;
+
+        for (const row of ds.data) {
+            const val = row[ci];
+            if (val === '' || val === null || val === undefined) continue;
+            nonEmptyCount++;
+            const s = String(val).trim();
+
+            if (isNaN(parseFloat(s)) || !isFinite(parseFloat(s))) allNumeric = false;
+            if (!/^-?\d+$/.test(s)) allInteger = false;
+            if (isNaN(Date.parse(s))) allDate = false;
+        }
+
+        if (nonEmptyCount === 0) { v.type = 'string'; v.measure = 'nominal'; }
+        else if (allDate) { v.type = 'date'; v.measure = 'scale'; }
+        else if (allInteger) { v.type = 'integer'; v.measure = 'scale'; v.decimals = 0; }
+        else if (allNumeric) { v.type = 'numeric'; v.measure = 'scale'; }
+        else { v.type = 'string'; v.measure = 'nominal'; }
+    });
+
+    AppState.variables = [...ds.variables];
+    renderVarTable();
+    renderDataTable();
+    syncToSQLite();
+    showToast('Tipos auto-detectados', 'success');
+}
+
+function deleteVariable(index) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+    const vName = ds.variables[index].name;
+    ds.variables.splice(index, 1);
+    ds.data.forEach(row => row.splice(index, 1));
+    ds.colCount = ds.variables.length;
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+    showToast(`Variable "${vName}" eliminada`, 'success');
+}
+
+function addColumn() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('Crea un dataset primero', 'warning'); return; }
+    const name = prompt('Nombre de la nueva variable:', `var${ds.colCount + 1}`);
+    if (!name) return;
+
+    ds.variables.push({
+        name: name.replace(/[^a-zA-Z0-9_]/g, '_'),
+        type: 'numeric', width: 8, decimals: 2,
+        label: name, values: '', measure: 'scale'
+    });
+    ds.data.forEach(row => row.push(''));
+    ds.colCount = ds.variables.length;
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+    showToast(`Columna "${name}" agregada`, 'success');
+}
+
+function addRow() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('Crea un dataset primero', 'warning'); return; }
+    const newRow = new Array(ds.variables.length).fill('');
+    ds.data.push(newRow);
+    ds.rowCount = ds.data.length;
+    AppState.data = ds.data.map(r => [...r]);
+    renderDataTable();
+    updateDataInfo();
+    syncToSQLite();
+    showToast('Fila agregada', 'success');
+}
+
+function clearData() {
+    if (!confirm('¿Estás seguro de que deseas eliminar todos los datos?')) return;
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+    ds.data = [];
+    ds.rowCount = 0;
+    AppState.data = [];
+    renderDataTable();
+    updateDataInfo();
+    syncToSQLite();
+    showToast('Datos eliminados', 'success');
+}
+
+function deleteSelectedRows() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || ds.data.length === 0) return;
+    // For simplicity, delete last row or show message
+    if (!confirm('¿Eliminar la última fila?')) return;
+    ds.data.pop();
+    ds.rowCount = ds.data.length;
+    AppState.data = ds.data.map(r => [...r]);
+    renderDataTable();
+    updateDataInfo();
+    syncToSQLite();
+    showToast('Fila eliminada', 'success');
+}
+
+// ==================== IMPORT / EXPORT ====================
+async function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    showLoading(`Importando ${file.name}...`);
+
+    try {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const arrayBuffer = await file.arrayBuffer();
+
+        if (ext === 'xlsx' || ext === 'xls') {
+            await importExcel(arrayBuffer, file.name);
+        } else if (ext === 'csv') {
+            await importCSV(arrayBuffer, file.name);
+        } else if (['db', 'sqlite', 'sqlite3'].includes(ext)) {
+            await importSQLite(arrayBuffer, file.name);
+        } else {
+            throw new Error('Formato no soportado');
+        }
+
+        hideLoading();
+        showToast(`"${file.name}" importado correctamente`, 'success');
+        switchTab('data');
+
+    } catch (err) {
+        hideLoading();
+        showToast('Error al importar: ' + err.message, 'error');
+        console.error(err);
+    }
+
+    event.target.value = '';
+}
+
+async function importExcel(arrayBuffer, filename) {
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+
+    if (jsonData.length < 2) throw new Error('El archivo no tiene suficientes datos');
+
+    const headers = jsonData[0].map(h => String(h || `col${jsonData[0].indexOf(h)}`).replace(/[^a-zA-Z0-9_]/g, '_'));
+    const rows = jsonData.slice(1);
+
+    const dsName = filename.replace(/\.[^/.]+$/, '');
+    createDataset(dsName);
+
+    const ds = AppState.datasets[AppState.currentDataset];
+    ds.variables = headers.map(h => ({
+        name: h, type: 'numeric', width: 12, decimals: 2,
+        label: h, values: '', measure: 'scale'
+    }));
+    ds.data = rows;
+    ds.rowCount = rows.length;
+    ds.colCount = headers.length;
+
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+
+    autoDetectTypes();
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+}
+
+async function importCSV(arrayBuffer, filename) {
+    const decoder = new TextDecoder('utf-8');
+    const text = decoder.decode(arrayBuffer);
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+
+    if (lines.length < 2) throw new Error('El CSV no tiene suficientes datos');
+
+    const delimiter = text.includes('\t') ? '\t' : ',';
+    const parseLine = (line) => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (const char of line) {
+            if (char === '"') { inQuotes = !inQuotes; }
+            else if (char === delimiter && !inQuotes) { result.push(current.trim()); current = ''; }
+            else { current += char; }
+        }
+        result.push(current.trim());
+        return result;
+    };
+
+    const headers = parseLine(lines[0]).map(h => String(h || `col${lines[0].indexOf(h)}`).replace(/[^a-zA-Z0-9_]/g, '_'));
+    const rows = lines.slice(1).map(line => parseLine(line));
+
+    const dsName = filename.replace(/\.[^/.]+$/, '');
+    createDataset(dsName);
+
+    const ds = AppState.datasets[AppState.currentDataset];
+    ds.variables = headers.map(h => ({
+        name: h, type: 'numeric', width: 12, decimals: 2,
+        label: h, values: '', measure: 'scale'
+    }));
+    ds.data = rows;
+    ds.rowCount = rows.length;
+    ds.colCount = headers.length;
+
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+
+    autoDetectTypes();
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+}
+
+async function importSQLite(arrayBuffer, filename) {
+    const SQL = AppState.SQL;
+    const importedDb = new SQL.Database(new Uint8Array(arrayBuffer));
+
+    // Get table names
+    const tables = importedDb.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+    if (tables.length === 0 || tables[0].values.length === 0) {
+        throw new Error('No se encontraron tablas en la base de datos');
+    }
+
+    const tableName = tables[0].values[0][0];
+    const result = importedDb.exec(`SELECT * FROM "${tableName}" LIMIT 1000`);
+
+    if (result.length === 0) throw new Error('La tabla está vacía');
+
+    const columns = result[0].columns;
+    const values = result[0].values;
+
+    const dsName = filename.replace(/\.[^/.]+$/, '');
+    createDataset(dsName);
+
+    const ds = AppState.datasets[AppState.currentDataset];
+    ds.variables = columns.map(c => ({
+        name: c.replace(/[^a-zA-Z0-9_]/g, '_'), type: 'numeric', width: 12, decimals: 2,
+        label: c, values: '', measure: 'scale'
+    }));
+    ds.data = values;
+    ds.rowCount = values.length;
+    ds.colCount = columns.length;
+
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+
+    autoDetectTypes();
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+    importedDb.close();
+}
+
+function exportToExcel() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || ds.data.length === 0) { showToast('No hay datos para exportar', 'warning'); return; }
+
+    const headers = ds.variables.map(v => v.label || v.name);
+    const wsData = [headers, ...ds.data];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, ds.displayName);
+    XLSX.writeFile(wb, `${ds.displayName}.xlsx`);
+    showToast('Exportado a Excel', 'success');
+}
+
+function exportToCSV() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || ds.data.length === 0) { showToast('No hay datos para exportar', 'warning'); return; }
+
+    const headers = ds.variables.map(v => v.label || v.name).join(',');
+    const rows = ds.data.map(row => row.map(v => {
+        const s = String(v ?? '');
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+    }).join(',')).join('\n');
+
+    const csv = headers + '\n' + rows;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${ds.displayName}.csv`;
+    link.click();
+    showToast('Exportado a CSV', 'success');
+}
+
+function exportSQLite() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos para exportar', 'warning'); return; }
+
+    syncToSQLite();
+    const data = AppState.db.export();
+    const blob = new Blob([data], { type: 'application/x-sqlite3' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${ds.displayName}.db`;
+    link.click();
+    showToast('Base de datos SQLite exportada', 'success');
+}
+
+function exportOutputToHTML() {
+    const container = document.getElementById('outputContainer');
+    if (!container.innerHTML.trim() || container.querySelector('.empty-state')) {
+        showToast('No hay output para exportar', 'warning'); return;
+    }
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>StatView Pro - Output</title><style>body{font-family:Arial,sans-serif;padding:20px;background:#f5f5f5}.output-section{background:white;border-radius:8px;padding:16px;margin-bottom:16px;border-left:4px solid #2980b9;box-shadow:0 2px 4px rgba(0,0,0,0.1)}.output-section-title{color:#1a5276;font-weight:700;margin-bottom:12px}table{width:100%;border-collapse:collapse;background:white}th{background:#2c3e50;color:white;padding:10px;text-align:center;font-size:0.85rem}td{padding:8px;text-align:center;border-bottom:1px solid #eee;font-size:0.85rem}td:first-child{text-align:left;font-weight:600}</style></head><body><h1>StatView Pro - Resultados de Análisis</h1><p>Generado: ${new Date().toLocaleString()}</p><hr>${container.innerHTML}</body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'StatView_Output.html';
+    link.click();
+    showToast('Output exportado a HTML', 'success');
+}
+
+// ==================== DEMO DATA ====================
+function loadDemoData() {
+    showLoading('Cargando datos demo...');
+
+    // Demo dataset: Student performance data
+    const demoData = [
+        ['id', 'genero', 'edad', 'matematicas', 'ciencia', 'lectura', 'horas_estudio', 'grupo'],
+        [1, 'M', 18, 85, 78, 92, 15, 'A'],
+        [2, 'F', 17, 92, 88, 95, 20, 'A'],
+        [3, 'M', 18, 78, 82, 80, 12, 'B'],
+        [4, 'F', 17, 95, 91, 88, 25, 'A'],
+        [5, 'M', 19, 65, 70, 72, 8, 'B'],
+        [6, 'F', 18, 88, 85, 90, 18, 'A'],
+        [7, 'M', 17, 72, 75, 78, 10, 'B'],
+        [8, 'F', 18, 90, 87, 93, 22, 'A'],
+        [9, 'M', 19, 68, 72, 70, 9, 'B'],
+        [10, 'F', 17, 94, 89, 91, 24, 'A'],
+        [11, 'M', 18, 80, 83, 85, 14, 'B'],
+        [12, 'F', 18, 87, 86, 89, 19, 'A'],
+        [13, 'M', 17, 75, 78, 76, 11, 'B'],
+        [14, 'F', 19, 91, 90, 94, 21, 'A'],
+        [15, 'M', 18, 70, 74, 73, 10, 'B'],
+        [16, 'F', 17, 96, 93, 97, 26, 'A'],
+        [17, 'M', 18, 82, 80, 84, 16, 'B'],
+        [18, 'F', 18, 89, 88, 90, 20, 'A'],
+        [19, 'M', 19, 66, 69, 68, 7, 'B'],
+        [20, 'F', 17, 93, 92, 96, 23, 'A'],
+        [21, 'M', 18, 77, 79, 81, 13, 'B'],
+        [22, 'F', 18, 86, 84, 87, 17, 'A'],
+        [23, 'M', 17, 71, 73, 75, 9, 'B'],
+        [24, 'F', 19, 90, 89, 92, 22, 'A'],
+        [25, 'M', 18, 79, 81, 80, 15, 'B'],
+        [26, 'F', 17, 95, 94, 95, 25, 'A'],
+        [27, 'M', 18, 74, 76, 77, 12, 'B'],
+        [28, 'F', 18, 88, 87, 89, 19, 'A'],
+        [29, 'M', 19, 67, 71, 69, 8, 'B'],
+        [30, 'F', 17, 92, 91, 93, 24, 'A']
+    ];
+
+    const headers = demoData[0];
+    const rows = demoData.slice(1);
+
+    createDataset('Demo_Estudiantes');
+    const ds = AppState.datasets[AppState.currentDataset];
+
+    ds.variables = headers.map((h, i) => {
+        const isNumeric = i >= 2 && i <= 6;
+        return {
+            name: h, type: isNumeric ? 'numeric' : 'string',
+            width: isNumeric ? 8 : 12, decimals: isNumeric ? 2 : 0,
+            label: h.charAt(0).toUpperCase() + h.slice(1).replace('_', ' '),
+            values: h === 'genero' ? 'M=Masculino, F=Femenino' : h === 'grupo' ? 'A=Grupo A, B=Grupo B' : '',
+            measure: isNumeric ? 'scale' : 'nominal'
+        };
+    });
+    ds.data = rows;
+    ds.rowCount = rows.length;
+    ds.colCount = headers.length;
+
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+
+    hideLoading();
+    showToast('Datos demo cargados: 30 estudiantes', 'success');
+    switchTab('data');
+}
+
+// ==================== UI HELPERS ====================
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+    const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if (btn) btn.classList.add('active');
+
+    const panel = document.getElementById(`panel-${tabName}`);
+    if (panel) panel.classList.add('active');
+
+    if (tabName === 'data') renderDataTable();
+    if (tabName === 'variables') renderVarTable();
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function showModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+}
+
+function showLoading(text) {
+    document.querySelector('.loading-text').textContent = text;
+    document.getElementById('loadingOverlay').classList.add('active');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icons = { success: 'check-circle', error: 'times-circle', warning: 'exclamation-triangle', info: 'info-circle' };
+    toast.innerHTML = `<i class="fas fa-${icons[type]} toast-icon"></i><span class="toast-message">${escapeHtml(message)}</span><button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function handleKeyboard(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key.toLowerCase()) {
+            case 'o': e.preventDefault(); document.getElementById('fileInput').click(); break;
+            case 's': e.preventDefault(); exportToExcel(); break;
+            case 'r': e.preventDefault(); runAllSyntax(); break;
+            case '1': e.preventDefault(); switchTab('data'); break;
+            case '2': e.preventDefault(); switchTab('variables'); break;
+            case '3': e.preventDefault(); switchTab('output'); break;
+            case '4': e.preventDefault(); switchTab('charts'); break;
+            case '5': e.preventDefault(); switchTab('syntax'); break;
+        }
+    }
+}
+
+function selectVarForAnalysis(varName) {
+    showToast(`Variable "${varName}" seleccionada. Abre un diálogo de análisis para usarla.`, 'info');
+}
+
+// ==================== DIALOG PREPARATION ====================
+function populateVarSelectors() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+
+    const numericVars = ds.variables.filter(v => v.type === 'numeric' || v.type === 'integer');
+    const allVars = ds.variables;
+    const groupVars = ds.variables.filter(v => v.type === 'string' || v.measure === 'nominal');
+
+    const makeOptions = (vars) => vars.map(v => `<option value="${escapeHtml(v.name)}">${escapeHtml(v.name)}</option>`).join('');
+    const makeCheckboxes = (vars, idPrefix) => vars.map((v, i) => 
+        `<label class="var-checkbox"><input type="checkbox" value="${escapeHtml(v.name)}" id="${idPrefix}_${i}"> ${escapeHtml(v.name)}</label>`
+    ).join('');
+
+    // Descriptives
+    document.getElementById('descVarSelector').innerHTML = makeCheckboxes(numericVars.length > 0 ? numericVars : allVars, 'desc');
+
+    // T-Test
+    document.getElementById('ttestVariable').innerHTML = makeOptions(numericVars);
+    document.getElementById('ttestGroupVariable').innerHTML = makeOptions(groupVars.length > 0 ? groupVars : allVars);
+    document.getElementById('ttestVariable2').innerHTML = makeOptions(numericVars);
+
+    // ANOVA
+    document.getElementById('anovaDV').innerHTML = makeOptions(numericVars);
+    document.getElementById('anovaFactor').innerHTML = makeOptions(groupVars.length > 0 ? groupVars : allVars);
+
+    // Correlation
+    document.getElementById('corrVarSelector').innerHTML = makeCheckboxes(numericVars, 'corr');
+
+    // Regression
+    document.getElementById('regDV').innerHTML = makeOptions(numericVars);
+    document.getElementById('regIVSelector').innerHTML = makeCheckboxes(numericVars, 'reg');
+
+    // Chi-Square
+    document.getElementById('chisqVar1').innerHTML = makeOptions(allVars);
+    document.getElementById('chisqVar2').innerHTML = makeOptions(allVars);
+
+    // Frequencies
+    document.getElementById('freqVarSelector').innerHTML = makeCheckboxes(allVars, 'freq');
+
+    // Crosstabs
+    document.getElementById('crossRow').innerHTML = makeOptions(allVars);
+    document.getElementById('crossCol').innerHTML = makeOptions(allVars);
+
+    // Transform
+    document.getElementById('transSource').innerHTML = makeOptions(numericVars);
+
+    // Charts
+    document.getElementById('chartVarX').innerHTML = makeOptions(allVars);
+    document.getElementById('chartVarY').innerHTML = '<option value="">-- Ninguna --</option>' + makeOptions(numericVars);
+    document.getElementById('chartGroup').innerHTML = '<option value="">-- Ninguna --</option>' + makeOptions(groupVars.length > 0 ? groupVars : allVars);
+}
+
+function updateTTestUI() {
+    const type = document.getElementById('ttestType').value;
+    document.getElementById('ttestTestValueGroup').style.display = type === 'one-sample' ? 'block' : 'none';
+    document.getElementById('ttestGroupVarGroup').style.display = type === 'independent' ? 'block' : 'none';
+    document.getElementById('ttestVar2Group').style.display = type === 'paired' ? 'block' : 'none';
+}
+
+// Dialog openers
+function showDescriptivesDialog() { populateVarSelectors(); showModal('descriptivesModal'); }
+function showTTestDialog() { populateVarSelectors(); updateTTestUI(); showModal('ttestModal'); }
+function showANOVADialog() { populateVarSelectors(); showModal('anovaModal'); }
+function showCorrelationDialog() { populateVarSelectors(); showModal('correlationModal'); }
+function showRegressionDialog() { populateVarSelectors(); showModal('regressionModal'); }
+function showChiSquareDialog() { populateVarSelectors(); showModal('chisqModal'); }
+function showFrequenciesDialog() { populateVarSelectors(); showModal('frequenciesModal'); }
+function showCrosstabsDialog() { populateVarSelectors(); showModal('crosstabsModal'); }
+function showTransformDialog() { populateVarSelectors(); showModal('transformModal'); }
+function showNewDatasetDialog() { const name = prompt('Nombre del nuevo dataset:'); if (name) createDataset(name); }
+function showImportSQLDialog() { document.getElementById('fileInput').accept = '.db,.sqlite,.sqlite3'; document.getElementById('fileInput').click(); document.getElementById('fileInput').accept = '.xlsx,.xls,.csv,.db,.sqlite,.sqlite3'; }
+function showHelpDialog() { showModal('helpModal'); }
+
+function showDatasetsDialog() {
+    const grid = document.getElementById('datasetGrid');
+    grid.innerHTML = Object.values(AppState.datasets).map(ds => `
+        <div class="dataset-card ${ds.name === AppState.currentDataset ? 'active' : ''}" onclick="switchDataset('${ds.name}'); closeModal('datasetsModal');">
+            <i class="fas fa-table"></i>
+            <div class="dataset-card-name">${escapeHtml(ds.displayName)}</div>
+            <div class="dataset-card-info">${ds.rowCount} filas × ${ds.colCount} cols</div>
+        </div>
+    `).join('');
+    showModal('datasetsModal');
+}
+
+function createNewDataset() {
+    const name = document.getElementById('newDatasetName').value.trim();
+    if (name) { createDataset(name); closeModal('datasetsModal'); document.getElementById('newDatasetName').value = ''; }
+}
+
+// ==================== STATISTICAL FUNCTIONS ====================
+
+// Helper: Get numeric values from a variable
+function getNumericValues(varName) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return [];
+    const colIdx = ds.variables.findIndex(v => v.name === varName);
+    if (colIdx === -1) return [];
+    return ds.data.map(row => parseFloat(row[colIdx])).filter(v => !isNaN(v));
+}
+
+// Helper: Get all values from a variable
+function getValues(varName) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return [];
+    const colIdx = ds.variables.findIndex(v => v.name === varName);
+    if (colIdx === -1) return [];
+    return ds.data.map(row => row[colIdx]).filter(v => v !== '' && v !== null && v !== undefined);
+}
+
+// Helper: Get values grouped by another variable
+function getGroupedValues(varName, groupVarName) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return {};
+    const valIdx = ds.variables.findIndex(v => v.name === varName);
+    const grpIdx = ds.variables.findIndex(v => v.name === groupVarName);
+    if (valIdx === -1 || grpIdx === -1) return {};
+
+    const groups = {};
+    ds.data.forEach(row => {
+        const grp = row[grpIdx];
+        const val = parseFloat(row[valIdx]);
+        if (!isNaN(val)) {
+            if (!groups[grp]) groups[grp] = [];
+            groups[grp].push(val);
+        }
+    });
+    return groups;
+}
+
+// Statistical utilities
+function mean(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+function variance(arr, sample = true) {
+    const m = mean(arr);
+    const sumSq = arr.reduce((a, b) => a + Math.pow(b - m, 2), 0);
+    return sumSq / (arr.length - (sample ? 1 : 0));
+}
+function stdDev(arr, sample = true) { return Math.sqrt(variance(arr, sample)); }
+function median(arr) {
+    const s = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+}
+function mode(arr) {
+    const freq = {};
+    arr.forEach(v => freq[v] = (freq[v] || 0) + 1);
+    let maxFreq = 0, modes = [];
+    for (const [v, f] of Object.entries(freq)) { if (f > maxFreq) { maxFreq = f; modes = [parseFloat(v)]; } else if (f === maxFreq) { modes.push(parseFloat(v)); } }
+    return modes.length === arr.length ? [] : modes;
+}
+function percentile(arr, p) {
+    const s = [...arr].sort((a, b) => a - b);
+    const idx = (p / 100) * (s.length - 1);
+    const lower = Math.floor(idx), upper = Math.ceil(idx);
+    if (lower === upper) return s[lower];
+    return s[lower] + (idx - lower) * (s[upper] - s[lower]);
+}
+function skewness(arr) {
+    const n = arr.length, m = mean(arr), s = stdDev(arr);
+    if (n < 3 || s === 0) return 0;
+    return (n / ((n - 1) * (n - 2))) * arr.reduce((a, b) => a + Math.pow((b - m) / s, 3), 0);
+}
+function kurtosis(arr) {
+    const n = arr.length, m = mean(arr), s = stdDev(arr);
+    if (n < 4 || s === 0) return 0;
+    const exKurt = (n * (n + 1) / ((n - 1) * (n - 2) * (n - 3))) * arr.reduce((a, b) => a + Math.pow((b - m) / s, 4), 0) - (3 * Math.pow(n - 1, 2) / ((n - 2) * (n - 3)));
+    return exKurt;
+}
+
+// T-distribution CDF approximation
+function tCDF(t, df) {
+    const x = df / (df + t * t);
+    return 0.5 + 0.5 * t * Math.sqrt(x) * (1 + x * (0.1666667 + x * (0.075 + x * 0.044642857)));
+}
+
+// F-distribution CDF approximation
+function fCDF(f, df1, df2) {
+    const x = df1 * f / (df1 * f + df2);
+    // Beta function approximation
+    return 1 - Math.pow(1 - x, df2 / 2) * (1 + df2 * x / 2);
+}
+
+// Chi-square CDF approximation
+function chi2CDF(x, k) {
+    if (x <= 0) return 0;
+    return 1 - Math.exp(-x / 2) * (1 + x / 2 + Math.pow(x, 2) / 8 + Math.pow(x, 3) / 48);
+}
+
+// ==================== DESCRIPTIVES ====================
+function runDescriptives() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const selectedVars = [];
+    document.querySelectorAll('#descVarSelector input:checked').forEach(cb => selectedVars.push(cb.value));
+    if (selectedVars.length === 0) { showToast('Selecciona al menos una variable', 'warning'); return; }
+
+    closeModal('descriptivesModal');
+    showLoading('Calculando descriptivos...');
+
+    setTimeout(() => {
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-list-ol"></i> Estadísticos Descriptivos</div></div>`;
+
+        selectedVars.forEach(varName => {
+            const values = getNumericValues(varName);
+            if (values.length === 0) return;
+
+            const n = values.length;
+            const m = mean(values);
+            const med = median(values);
+            const mod = mode(values);
+            const sd = stdDev(values);
+            const var_ = variance(values);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const range = max - min;
+
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-chart-bar"></i> ${escapeHtml(varName)} (N = ${n})</div>`;
+            html += `<table class="output-table"><thead><tr><th>Estadístico</th><th>Valor</th></tr></thead><tbody>`;
+
+            html += `<tr><td>N válido</td><td class="stat-value">${n}</td></tr>`;
+            html += `<tr><td>Media</td><td class="stat-value">${m.toFixed(4)}</td></tr>`;
+            if (document.getElementById('descMedian').checked) html += `<tr><td>Mediana</td><td class="stat-value">${med.toFixed(4)}</td></tr>`;
+            if (document.getElementById('descMode').checked) html += `<tr><td>Moda</td><td class="stat-value">${mod.length > 0 ? mod.map(v => v.toFixed(4)).join(', ') : 'N/A'}</td></tr>`;
+            if (document.getElementById('descStd').checked) html += `<tr><td>Desv. Estándar</td><td class="stat-value">${sd.toFixed(4)}</td></tr>`;
+            if (document.getElementById('descVar').checked) html += `<tr><td>Varianza</td><td class="stat-value">${var_.toFixed(4)}</td></tr>`;
+            if (document.getElementById('descMinMax').checked) {
+                html += `<tr><td>Mínimo</td><td class="stat-value">${min.toFixed(4)}</td></tr>`;
+                html += `<tr><td>Máximo</td><td class="stat-value">${max.toFixed(4)}</td></tr>`;
+            }
+            if (document.getElementById('descRange').checked) html += `<tr><td>Rango</td><td class="stat-value">${range.toFixed(4)}</td></tr>`;
+            if (document.getElementById('descSkew').checked) html += `<tr><td>Asimetría</td><td class="stat-value">${skewness(values).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descKurt').checked) html += `<tr><td>Curtosis</td><td class="stat-value">${kurtosis(values).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descQ1').checked) html += `<tr><td>Q1 (25%)</td><td class="stat-value">${percentile(values, 25).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descQ3').checked) html += `<tr><td>Q3 (75%)</td><td class="stat-value">${percentile(values, 75).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descIQR').checked) html += `<tr><td>IQR</td><td class="stat-value">${(percentile(values, 75) - percentile(values, 25)).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descP5').checked) html += `<tr><td>P5</td><td class="stat-value">${percentile(values, 5).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descP10').checked) html += `<tr><td>P10</td><td class="stat-value">${percentile(values, 10).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descP90').checked) html += `<tr><td>P90</td><td class="stat-value">${percentile(values, 90).toFixed(4)}</td></tr>`;
+            if (document.getElementById('descP95').checked) html += `<tr><td>P95</td><td class="stat-value">${percentile(values, 95).toFixed(4)}</td></tr>`;
+
+            html += `</tbody></table></div>`;
+        });
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Descriptivos calculados', 'success');
+
+        // Add to syntax
+        addToSyntax(`DESCRIPTIVES ${selectedVars.join(' ')}`);
+    }, 100);
+}
+
+// ==================== T-TEST ====================
+function runTTest() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const type = document.getElementById('ttestType').value;
+    const alpha = parseFloat(document.getElementById('ttestAlpha').value);
+    const varName = document.getElementById('ttestVariable').value;
+
+    closeModal('ttestModal');
+    showLoading('Calculando T-Test...');
+
+    setTimeout(() => {
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-balance-scale"></i> T-Test`;
+
+        if (type === 'one-sample') {
+            const testValue = parseFloat(document.getElementById('ttestTestValue').value);
+            const values = getNumericValues(varName);
+            const n = values.length;
+            const m = mean(values);
+            const sd = stdDev(values);
+            const se = sd / Math.sqrt(n);
+            const t = (m - testValue) / se;
+            const df = n - 1;
+            const pValue = 2 * (1 - tCDF(Math.abs(t), df));
+            const ci95Lower = m - 1.96 * se;
+            const ci95Upper = m + 1.96 * se;
+
+            html += ` - One Sample (${escapeHtml(varName)})</div></div>`;
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Estadísticos</div>`;
+            html += `<table class="output-table"><thead><tr><th></th><th>N</th><th>Media</th><th>Desv. Est.</th><th>Error Est.</th></tr></thead>`;
+            html += `<tbody><tr><td>${escapeHtml(varName)}</td><td>${n}</td><td>${m.toFixed(4)}</td><td>${sd.toFixed(4)}</td><td>${se.toFixed(4)}</td></tr></tbody></table>`;
+            html += `</div><div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Prueba de Hipótesis</div>`;
+            html += `<table class="output-table"><thead><tr><th>t</th><th>gl</th><th>Sig. (bilateral)</th><th>Diferencia Media</th><th>IC 95% Inferior</th><th>IC 95% Superior</th></tr></thead>`;
+            html += `<tbody><tr><td>${t.toFixed(4)}</td><td>${df}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)} ${pValue < alpha ? '**' : ''}</td><td>${(m - testValue).toFixed(4)}</td><td>${ci95Lower.toFixed(4)}</td><td>${ci95Upper.toFixed(4)}</td></tr></tbody></table>`;
+            html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: μ = ${testValue} | H₁: μ ≠ ${testValue} | α = ${alpha}</p>`;
+            html += `</div>`;
+
+            addToSyntax(`TTEST /TESTVAL=${testValue} /VARIABLES=${varName}`);
+
+        } else if (type === 'independent') {
+            const groupVar = document.getElementById('ttestGroupVariable').value;
+            const groups = getGroupedValues(varName, groupVar);
+            const groupNames = Object.keys(groups);
+
+            if (groupNames.length !== 2) {
+                hideLoading();
+                showToast('La variable de agrupación debe tener exactamente 2 grupos', 'error');
+                return;
+            }
+
+            const g1 = groups[groupNames[0]];
+            const g2 = groups[groupNames[1]];
+            const n1 = g1.length, n2 = g2.length;
+            const m1 = mean(g1), m2 = mean(g2);
+            const sd1 = stdDev(g1), sd2 = stdDev(g2);
+            const se1 = sd1 / Math.sqrt(n1), se2 = sd2 / Math.sqrt(n2);
+
+            // Pooled variance
+            const sp2 = ((n1 - 1) * variance(g1) + (n2 - 1) * variance(g2)) / (n1 + n2 - 2);
+            const seDiff = Math.sqrt(sp2 * (1/n1 + 1/n2));
+            const t = (m1 - m2) / seDiff;
+            const df = n1 + n2 - 2;
+            const pValue = 2 * (1 - tCDF(Math.abs(t), df));
+            const ci95Lower = (m1 - m2) - 1.96 * seDiff;
+            const ci95Upper = (m1 - m2) + 1.96 * seDiff;
+
+            html += ` - Independent Samples (${escapeHtml(varName)} por ${escapeHtml(groupVar)})</div></div>`;
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Estadísticos de Grupo</div>`;
+            html += `<table class="output-table"><thead><tr><th>Grupo</th><th>N</th><th>Media</th><th>Desv. Est.</th><th>Error Est.</th></tr></thead><tbody>`;
+            html += `<tr><td>${escapeHtml(groupNames[0])}</td><td>${n1}</td><td>${m1.toFixed(4)}</td><td>${sd1.toFixed(4)}</td><td>${se1.toFixed(4)}</td></tr>`;
+            html += `<tr><td>${escapeHtml(groupNames[1])}</td><td>${n2}</td><td>${m2.toFixed(4)}</td><td>${sd2.toFixed(4)}</td><td>${se2.toFixed(4)}</td></tr>`;
+            html += `</tbody></table></div>`;
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Prueba de Hipótesis (Varianzas Iguales Asumidas)</div>`;
+            html += `<table class="output-table"><thead><tr><th>t</th><th>gl</th><th>Sig. (bilateral)</th><th>Diferencia Media</th><th>Error Dif.</th><th>IC 95% Inferior</th><th>IC 95% Superior</th></tr></thead>`;
+            html += `<tbody><tr><td>${t.toFixed(4)}</td><td>${df}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)} ${pValue < alpha ? '**' : ''}</td><td>${(m1 - m2).toFixed(4)}</td><td>${seDiff.toFixed(4)}</td><td>${ci95Lower.toFixed(4)}</td><td>${ci95Upper.toFixed(4)}</td></tr></tbody></table>`;
+            html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: μ₁ = μ₂ | H₁: μ₁ ≠ μ₂ | α = ${alpha}</p>`;
+            html += `</div>`;
+
+            addToSyntax(`TTEST GROUPS=${groupVar}(${groupNames[0]} ${groupNames[1]}) /VARIABLES=${varName}`);
+
+        } else if (type === 'paired') {
+            const varName2 = document.getElementById('ttestVariable2').value;
+            const vals1 = getNumericValues(varName);
+            const vals2 = getNumericValues(varName2);
+            const n = Math.min(vals1.length, vals2.length);
+            const diffs = [];
+            for (let i = 0; i < n; i++) diffs.push(vals1[i] - vals2[i]);
+
+            const mDiff = mean(diffs);
+            const sdDiff = stdDev(diffs);
+            const seDiff = sdDiff / Math.sqrt(n);
+            const t = mDiff / seDiff;
+            const df = n - 1;
+            const pValue = 2 * (1 - tCDF(Math.abs(t), df));
+            const ci95Lower = mDiff - 1.96 * seDiff;
+            const ci95Upper = mDiff + 1.96 * seDiff;
+
+            html += ` - Paired Samples (${escapeHtml(varName)} vs ${escapeHtml(varName2)})</div></div>`;
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Estadísticos de Pares</div>`;
+            html += `<table class="output-table"><thead><tr><th></th><th>Media</th><th>N</th><th>Desv. Est.</th><th>Error Est.</th></tr></thead><tbody>`;
+            html += `<tr><td>${escapeHtml(varName)}</td><td>${mean(vals1).toFixed(4)}</td><td>${vals1.length}</td><td>${stdDev(vals1).toFixed(4)}</td><td>${(stdDev(vals1)/Math.sqrt(vals1.length)).toFixed(4)}</td></tr>`;
+            html += `<tr><td>${escapeHtml(varName2)}</td><td>${mean(vals2).toFixed(4)}</td><td>${vals2.length}</td><td>${stdDev(vals2).toFixed(4)}</td><td>${(stdDev(vals2)/Math.sqrt(vals2.length)).toFixed(4)}</td></tr>`;
+            html += `</tbody></table></div>`;
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Prueba de Hipótesis</div>`;
+            html += `<table class="output-table"><thead><tr><th>t</th><th>gl</th><th>Sig. (bilateral)</th><th>Diferencia Media</th><th>IC 95% Inferior</th><th>IC 95% Superior</th></tr></thead>`;
+            html += `<tbody><tr><td>${t.toFixed(4)}</td><td>${df}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)} ${pValue < alpha ? '**' : ''}</td><td>${mDiff.toFixed(4)}</td><td>${ci95Lower.toFixed(4)}</td><td>${ci95Upper.toFixed(4)}</td></tr></tbody></table>`;
+            html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: μd = 0 | H₁: μd ≠ 0 | α = ${alpha}</p>`;
+            html += `</div>`;
+
+            addToSyntax(`TTEST PAIRS=${varName} WITH ${varName2}`);
+        }
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('T-Test completado', 'success');
+    }, 100);
+}
+
+// ==================== ANOVA ====================
+function runANOVA() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const dvName = document.getElementById('anovaDV').value;
+    const factorName = document.getElementById('anovaFactor').value;
+    const alpha = parseFloat(document.getElementById('anovaAlpha').value);
+
+    closeModal('anovaModal');
+    showLoading('Calculando ANOVA...');
+
+    setTimeout(() => {
+        const groups = getGroupedValues(dvName, factorName);
+        const groupNames = Object.keys(groups);
+        const k = groupNames.length;
+
+        if (k < 2) {
+            hideLoading();
+            showToast('Se necesitan al menos 2 grupos', 'error');
+            return;
+        }
+
+        // Calculate group statistics
+        const groupStats = groupNames.map(g => {
+            const vals = groups[g];
+            return { name: g, n: vals.length, mean: mean(vals), sd: stdDev(vals), sum: vals.reduce((a,b)=>a+b,0) };
+        });
+
+        const grandMean = mean(groupStats.flatMap(gs => groups[gs.name]));
+        const N = groupStats.reduce((a, gs) => a + gs.n, 0);
+
+        // SSB (Between groups)
+        const SSB = groupStats.reduce((a, gs) => a + gs.n * Math.pow(gs.mean - grandMean, 2), 0);
+        const dfB = k - 1;
+        const MSB = SSB / dfB;
+
+        // SSW (Within groups)
+        const SSW = groupStats.reduce((a, gs) => {
+            const vals = groups[gs.name];
+            return a + vals.reduce((b, v) => b + Math.pow(v - gs.mean, 2), 0);
+        }, 0);
+        const dfW = N - k;
+        const MSW = SSW / dfW;
+
+        // F-statistic
+        const F = MSB / MSW;
+        const pValue = 1 - fCDF(F, dfB, dfW);
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-layer-group"></i> ANOVA Unidireccional (${escapeHtml(dvName)} ~ ${escapeHtml(factorName)})</div></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Estadísticos Descriptivos</div>`;
+        html += `<table class="output-table"><thead><tr><th>Grupo</th><th>N</th><th>Media</th><th>Desv. Est.</th><th>Error Est.</th></tr></thead><tbody>`;
+        groupStats.forEach(gs => {
+            html += `<tr><td>${escapeHtml(gs.name)}</td><td>${gs.n}</td><td>${gs.mean.toFixed(4)}</td><td>${gs.sd.toFixed(4)}</td><td>${(gs.sd/Math.sqrt(gs.n)).toFixed(4)}</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Tabla ANOVA</div>`;
+        html += `<table class="output-table"><thead><tr><th>Fuente</th><th>Suma Cuadrados</th><th>gl</th><th>Media Cuadrática</th><th>F</th><th>Sig.</th></tr></thead><tbody>`;
+        html += `<tr><td>Entre Grupos</td><td>${SSB.toFixed(4)}</td><td>${dfB}</td><td>${MSB.toFixed(4)}</td><td>${F.toFixed(4)}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)} ${pValue < alpha ? '**' : ''}</td></tr>`;
+        html += `<tr><td>Dentro de Grupos</td><td>${SSW.toFixed(4)}</td><td>${dfW}</td><td>${MSW.toFixed(4)}</td><td></td><td></td></tr>`;
+        html += `<tr style="font-weight:700"><td>Total</td><td>${(SSB + SSW).toFixed(4)}</td><td>${N - 1}</td><td></td><td></td><td></td></tr>`;
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: μ₁ = μ₂ = ... = μₖ | H₁: Al menos una media difiere | α = ${alpha}</p>`;
+        html += `</div>`;
+
+        // Eta squared
+        const eta2 = SSB / (SSB + SSW);
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-ruler-combined"></i> Medidas de Tamaño del Efecto</div>`;
+        html += `<table class="output-table"><thead><tr><th>Medida</th><th>Valor</th><th>Interpretación</th></tr></thead><tbody>`;
+        html += `<tr><td>Eta Cuadrado (η²)</td><td>${eta2.toFixed(4)}</td><td>${eta2 < 0.01 ? 'Despreciable' : eta2 < 0.06 ? 'Pequeño' : eta2 < 0.14 ? 'Mediano' : 'Grande'}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('ANOVA completado', 'success');
+        addToSyntax(`ANOVA ${dvName} BY ${factorName}`);
+    }, 100);
+}
+
+// ==================== CORRELATION ====================
+function runCorrelation() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const selectedVars = [];
+    document.querySelectorAll('#corrVarSelector input:checked').forEach(cb => selectedVars.push(cb.value));
+    if (selectedVars.length < 2) { showToast('Selecciona al menos 2 variables', 'warning'); return; }
+
+    const corrType = document.getElementById('corrType').value;
+    const alpha = parseFloat(document.getElementById('corrAlpha').value);
+
+    closeModal('correlationModal');
+    showLoading('Calculando correlaciones...');
+
+    setTimeout(() => {
+        const n = selectedVars.length;
+        const corrMatrix = [];
+        const pMatrix = [];
+
+        for (let i = 0; i < n; i++) {
+            corrMatrix[i] = [];
+            pMatrix[i] = [];
+            for (let j = 0; j < n; j++) {
+                if (i === j) { corrMatrix[i][j] = 1; pMatrix[i][j] = 0; continue; }
+
+                const v1 = getNumericValues(selectedVars[i]);
+                const v2 = getNumericValues(selectedVars[j]);
+                const minLen = Math.min(v1.length, v2.length);
+                const x = v1.slice(0, minLen);
+                const y = v2.slice(0, minLen);
+
+                if (corrType === 'pearson') {
+                    const mx = mean(x), my = mean(y);
+                    const num = x.reduce((a, xi, idx) => a + (xi - mx) * (y[idx] - my), 0);
+                    const den = Math.sqrt(x.reduce((a, xi) => a + Math.pow(xi - mx, 2), 0) * y.reduce((a, yi) => a + Math.pow(yi - my, 2), 0));
+                    const r = den === 0 ? 0 : num / den;
+                    const t = r * Math.sqrt((minLen - 2) / (1 - r * r));
+                    const p = 2 * (1 - tCDF(Math.abs(t), minLen - 2));
+                    corrMatrix[i][j] = r;
+                    pMatrix[i][j] = p;
+                } else {
+                    // Spearman rank correlation
+                    const rank = (arr) => {
+                        const sorted = [...arr].map((v, i) => ({v, i})).sort((a, b) => a.v - b.v);
+                        const ranks = new Array(arr.length);
+                        sorted.forEach((item, idx) => ranks[item.i] = idx + 1);
+                        return ranks;
+                    };
+                    const rx = rank(x), ry = rank(y);
+                    const d = rx.map((ri, idx) => ri - ry[idx]);
+                    const d2 = d.reduce((a, di) => a + di * di, 0);
+                    const rho = 1 - (6 * d2) / (minLen * (minLen * minLen - 1));
+                    const t = rho * Math.sqrt((minLen - 2) / (1 - rho * rho));
+                    const p = 2 * (1 - tCDF(Math.abs(t), minLen - 2));
+                    corrMatrix[i][j] = rho;
+                    pMatrix[i][j] = p;
+                }
+            }
+        }
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-project-diagram"></i> Correlaciones (${corrType === 'pearson' ? 'Pearson' : 'Spearman'})</div></div>`;
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-table"></i> Matriz de Correlaciones</div>`;
+        html += `<table class="output-table"><thead><tr><th></th>${selectedVars.map(v => `<th>${escapeHtml(v)}</th>`).join('')}</tr></thead><tbody>`;
+
+        for (let i = 0; i < n; i++) {
+            html += `<tr><td style="font-weight:700">${escapeHtml(selectedVars[i])}</td>`;
+            for (let j = 0; j < n; j++) {
+                const r = corrMatrix[i][j];
+                const p = pMatrix[i][j];
+                const sig = p < alpha ? '**' : p < alpha * 2 ? '*' : '';
+                const cls = p < alpha ? 'p-sig' : '';
+                html += `<td class="${cls} stat-value">${r.toFixed(4)}${sig}</td>`;
+            }
+            html += `</tr>`;
+        }
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.8rem;color:var(--text-muted)">*. Correlación significativa al nivel ${alpha * 2} (bilateral)<br>**. Correlación significativa al nivel ${alpha} (bilateral)</p>`;
+        html += `</div>`;
+
+        // Individual correlations
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-list"></i> Correlaciones Individuales</div>`;
+        html += `<table class="output-table"><thead><tr><th>Variables</th><th>r</th><th>gl</th><th>Sig. (bilateral)</th><th>Interpretación</th></tr></thead><tbody>`;
+
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                const r = corrMatrix[i][j];
+                const p = pMatrix[i][j];
+                const absR = Math.abs(r);
+                const interp = absR < 0.1 ? 'Despreciable' : absR < 0.3 ? 'Pequeña' : absR < 0.5 ? 'Moderada' : absR < 0.7 ? 'Fuerte' : 'Muy fuerte';
+                html += `<tr><td>${escapeHtml(selectedVars[i])} - ${escapeHtml(selectedVars[j])}</td><td class="${p < alpha ? 'p-sig' : ''} stat-value">${r.toFixed(4)}</td><td>${getNumericValues(selectedVars[i]).length - 2}</td><td class="${p < alpha ? 'p-sig' : 'p-ns'}">${p.toFixed(4)}</td><td>${interp}</td></tr>`;
+            }
+        }
+        html += `</tbody></table></div>`;
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Correlaciones calculadas', 'success');
+        addToSyntax(`CORRELATIONS ${selectedVars.join(' ')} /TYPE=${corrType.toUpperCase()}`);
+    }, 100);
+}
+
+// ==================== REGRESSION ====================
+function runRegression() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const dvName = document.getElementById('regDV').value;
+    const selectedIVs = [];
+    document.querySelectorAll('#regIVSelector input:checked').forEach(cb => selectedIVs.push(cb.value));
+    if (selectedIVs.length === 0) { showToast('Selecciona al menos una variable independiente', 'warning'); return; }
+    if (selectedIVs.includes(dvName)) { showToast('La variable dependiente no puede ser independiente', 'warning'); return; }
+
+    const alpha = parseFloat(document.getElementById('regAlpha').value);
+
+    closeModal('regressionModal');
+    showLoading('Calculando regresión...');
+
+    setTimeout(() => {
+        const y = getNumericValues(dvName);
+        const X = selectedIVs.map(iv => getNumericValues(iv));
+        const n = Math.min(y.length, ...X.map(x => x.length));
+        const k = selectedIVs.length;
+
+        // Trim to same length
+        const yTrim = y.slice(0, n);
+        const XTrim = X.map(x => x.slice(0, n));
+
+        // Add intercept
+        const XWithIntercept = XTrim.map((col, idx) => {
+            if (idx === 0) return [new Array(n).fill(1), ...XTrim];
+            return null;
+        }).filter(Boolean)[0] || [new Array(n).fill(1), ...XTrim];
+
+        // Simple matrix operations for OLS
+        // X'X and X'y
+        const p = k + 1; // number of parameters (including intercept)
+
+        // Build design matrix with intercept
+        const designMatrix = [];
+        for (let i = 0; i < n; i++) {
+            designMatrix.push([1, ...XTrim.map(col => col[i])]);
+        }
+
+        // X'X
+        const XtX = [];
+        for (let i = 0; i < p; i++) {
+            XtX[i] = [];
+            for (let j = 0; j < p; j++) {
+                XtX[i][j] = designMatrix.reduce((sum, row) => sum + row[i] * row[j], 0);
+            }
+        }
+
+        // X'y
+        const Xty = [];
+        for (let i = 0; i < p; i++) {
+            Xty[i] = designMatrix.reduce((sum, row, idx) => sum + row[i] * yTrim[idx], 0);
+        }
+
+        // Solve using Gaussian elimination
+        const beta = solveLinearSystem(XtX, Xty);
+
+        // Predicted values
+        const yHat = designMatrix.map(row => row.reduce((sum, val, idx) => sum + val * beta[idx], 0));
+
+        // Residuals
+        const residuals = yTrim.map((yi, i) => yi - yHat[i]);
+
+        // SST, SSE, SSR
+        const yMean = mean(yTrim);
+        const SST = yTrim.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0);
+        const SSE = residuals.reduce((sum, ri) => sum + ri * ri, 0);
+        const SSR = SST - SSE;
+
+        const dfR = k;
+        const dfE = n - k - 1;
+        const MSR = SSR / dfR;
+        const MSE = SSE / dfE;
+        const F = MSR / MSE;
+        const pValue = 1 - fCDF(F, dfR, dfE);
+
+        const R2 = SSR / SST;
+        const adjR2 = 1 - (1 - R2) * ((n - 1) / (n - k - 1));
+
+        // Standard errors of coefficients
+        const seBeta = [];
+        const tBeta = [];
+        const pBeta = [];
+
+        // Variance-covariance matrix (approximate using diagonal of inverse)
+        for (let i = 0; i < p; i++) {
+            // Simplified: use MSE / (n * variance of predictor)
+            let varXi;
+            if (i === 0) {
+                varXi = 1; // intercept
+            } else {
+                const col = XTrim[i - 1];
+                varXi = variance(col) * (n - 1) / n;
+            }
+            const se = Math.sqrt(MSE / (n * varXi));
+            seBeta.push(se);
+            const t = beta[i] / se;
+            tBeta.push(t);
+            pBeta.push(2 * (1 - tCDF(Math.abs(t), dfE)));
+        }
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-chart-line"></i> Regresión Lineal (${escapeHtml(dvName)} ~ ${selectedIVs.map(escapeHtml).join(' + ')})</div></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Resumen del Modelo</div>`;
+        html += `<table class="output-table"><thead><tr><th>R</th><th>R²</th><th>R² Ajustado</th><th>Error Est. Estándar</th></tr></thead><tbody>`;
+        html += `<tr><td class="stat-value">${Math.sqrt(R2).toFixed(4)}</td><td class="stat-value">${R2.toFixed(4)}</td><td class="stat-value">${adjR2.toFixed(4)}</td><td class="stat-value">${Math.sqrt(MSE).toFixed(4)}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-calculator"></i> ANOVA del Modelo</div>`;
+        html += `<table class="output-table"><thead><tr><th>Fuente</th><th>Suma Cuadrados</th><th>gl</th><th>Media Cuadrática</th><th>F</th><th>Sig.</th></tr></thead><tbody>`;
+        html += `<tr><td>Regresión</td><td>${SSR.toFixed(4)}</td><td>${dfR}</td><td>${MSR.toFixed(4)}</td><td>${F.toFixed(4)}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)}</td></tr>`;
+        html += `<tr><td>Residual</td><td>${SSE.toFixed(4)}</td><td>${dfE}</td><td>${MSE.toFixed(4)}</td><td></td><td></td></tr>`;
+        html += `<tr style="font-weight:700"><td>Total</td><td>${SST.toFixed(4)}</td><td>${n - 1}</td><td></td><td></td><td></td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-sliders-h"></i> Coeficientes</div>`;
+        html += `<table class="output-table"><thead><tr><th>Variable</th><th>B</th><th>Error Est.</th><th>t</th><th>Sig.</th></tr></thead><tbody>`;
+        html += `<tr><td>(Constante)</td><td class="stat-value">${beta[0].toFixed(4)}</td><td class="stat-value">${seBeta[0].toFixed(4)}</td><td class="stat-value">${tBeta[0].toFixed(4)}</td><td class="${pBeta[0] < alpha ? 'p-sig' : 'p-ns'}">${pBeta[0].toFixed(4)}</td></tr>`;
+        selectedIVs.forEach((iv, i) => {
+            html += `<tr><td>${escapeHtml(iv)}</td><td class="stat-value">${beta[i + 1].toFixed(4)}</td><td class="stat-value">${seBeta[i + 1].toFixed(4)}</td><td class="stat-value">${tBeta[i + 1].toFixed(4)}</td><td class="${pBeta[i + 1] < alpha ? 'p-sig' : 'p-ns'}">${pBeta[i + 1].toFixed(4)}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">Variable dependiente: ${escapeHtml(dvName)} | α = ${alpha}</p>`;
+        html += `</div>`;
+
+        // Equation
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-function"></i> Ecuación del Modelo</div>`;
+        let eq = `${escapeHtml(dvName)} = ${beta[0].toFixed(4)}`;
+        selectedIVs.forEach((iv, i) => {
+            const sign = beta[i + 1] >= 0 ? ' + ' : ' - ';
+            eq += `${sign}${Math.abs(beta[i + 1]).toFixed(4)}·${escapeHtml(iv)}`;
+        });
+        html += `<p style="font-family:monospace;font-size:1rem;background:#f8f9fa;padding:12px;border-radius:6px;">${eq}</p>`;
+        html += `</div>`;
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Regresión calculada', 'success');
+        addToSyntax(`REGRESSION /DEPENDENT=${dvName} /METHOD=ENTER ${selectedIVs.join(' ')}`);
+    }, 100);
+}
+
+// Gaussian elimination for solving linear system
+function solveLinearSystem(A, b) {
+    const n = A.length;
+    // Augmented matrix
+    const M = A.map((row, i) => [...row, b[i]]);
+
+    // Forward elimination
+    for (let i = 0; i < n; i++) {
+        // Partial pivoting
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
+        }
+        [M[i], M[maxRow]] = [M[maxRow], M[i]];
+
+        if (Math.abs(M[i][i]) < 1e-10) continue;
+
+        for (let k = i + 1; k < n; k++) {
+            const factor = M[k][i] / M[i][i];
+            for (let j = i; j <= n; j++) {
+                M[k][j] -= factor * M[i][j];
+            }
+        }
+    }
+
+    // Back substitution
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        if (Math.abs(M[i][i]) < 1e-10) { x[i] = 0; continue; }
+        x[i] = M[i][n];
+        for (let j = i + 1; j < n; j++) {
+            x[i] -= M[i][j] * x[j];
+        }
+        x[i] /= M[i][i];
+    }
+    return x;
+}
+
+// ==================== CHI-SQUARE ====================
+function runChiSquare() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const var1 = document.getElementById('chisqVar1').value;
+    const var2 = document.getElementById('chisqVar2').value;
+    const alpha = parseFloat(document.getElementById('chisqAlpha').value);
+
+    if (var1 === var2) { showToast('Las variables deben ser diferentes', 'warning'); return; }
+
+    closeModal('chisqModal');
+    showLoading('Calculando Chi-Cuadrado...');
+
+    setTimeout(() => {
+        const vals1 = getValues(var1);
+        const vals2 = getValues(var2);
+        const n = Math.min(vals1.length, vals2.length);
+
+        // Build contingency table
+        const cats1 = [...new Set(vals1.slice(0, n))];
+        const cats2 = [...new Set(vals2.slice(0, n))];
+
+        const obs = {};
+        cats1.forEach(c1 => { obs[c1] = {}; cats2.forEach(c2 => obs[c1][c2] = 0); });
+
+        for (let i = 0; i < n; i++) {
+            const c1 = vals1[i], c2 = vals2[i];
+            if (obs[c1] && obs[c1][c2] !== undefined) obs[c1][c2]++;
+        }
+
+        // Row and column totals
+        const rowTotals = {};
+        const colTotals = {};
+        cats1.forEach(c1 => rowTotals[c1] = cats2.reduce((sum, c2) => sum + obs[c1][c2], 0));
+        cats2.forEach(c2 => colTotals[c2] = cats1.reduce((sum, c1) => sum + obs[c1][c2], 0));
+
+        // Expected frequencies
+        const exp = {};
+        cats1.forEach(c1 => {
+            exp[c1] = {};
+            cats2.forEach(c2 => {
+                exp[c1][c2] = (rowTotals[c1] * colTotals[c2]) / n;
+            });
+        });
+
+        // Chi-square statistic
+        let chi2 = 0;
+        cats1.forEach(c1 => {
+            cats2.forEach(c2 => {
+                if (exp[c1][c2] > 0) {
+                    chi2 += Math.pow(obs[c1][c2] - exp[c1][c2], 2) / exp[c1][c2];
+                }
+            });
+        });
+
+        const df = (cats1.length - 1) * (cats2.length - 1);
+        const pValue = 1 - chi2CDF(chi2, df);
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-check-square"></i> Prueba de Chi-Cuadrado (${escapeHtml(var1)} × ${escapeHtml(var2)})</div></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-table"></i> Tabla de Contingencia (Observadas)</div>`;
+        html += `<table class="output-table"><thead><tr><th></th>${cats2.map(c => `<th>${escapeHtml(String(c))}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+        cats1.forEach(c1 => {
+            html += `<tr><td style="font-weight:700">${escapeHtml(String(c1))}</td>`;
+            cats2.forEach(c2 => html += `<td>${obs[c1][c2]}</td>`);
+            html += `<td style="font-weight:700">${rowTotals[c1]}</td></tr>`;
+        });
+        html += `<tr style="font-weight:700"><td>Total</td>${cats2.map(c2 => `<td>${colTotals[c2]}</td>`).join('')}<td>${n}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-table"></i> Frecuencias Esperadas</div>`;
+        html += `<table class="output-table"><thead><tr><th></th>${cats2.map(c => `<th>${escapeHtml(String(c))}</th>`).join('')}</tr></thead><tbody>`;
+        cats1.forEach(c1 => {
+            html += `<tr><td style="font-weight:700">${escapeHtml(String(c1))}</td>`;
+            cats2.forEach(c2 => html += `<td>${exp[c1][c2].toFixed(2)}</td>`);
+            html += `</tr>`;
+        });
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Estadísticos de Prueba</div>`;
+        html += `<table class="output-table"><thead><tr><th></th><th>Valor</th><th>gl</th><th>Sig. Asintótica (bilateral)</th></tr></thead><tbody>`;
+        html += `<tr><td>Chi-Cuadrado de Pearson</td><td class="stat-value">${chi2.toFixed(4)}</td><td>${df}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)} ${pValue < alpha ? '**' : ''}</td></tr>`;
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: Las variables son independientes | H₁: Las variables están asociadas | α = ${alpha}</p>`;
+        html += `</div>`;
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Chi-Cuadrado calculado', 'success');
+        addToSyntax(`CHISQUARE ${var1} ${var2}`);
+    }, 100);
+}
+
+// ==================== FREQUENCIES ====================
+function runFrequencies() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const selectedVars = [];
+    document.querySelectorAll('#freqVarSelector input:checked').forEach(cb => selectedVars.push(cb.value));
+    if (selectedVars.length === 0) { showToast('Selecciona al menos una variable', 'warning'); return; }
+
+    const showTable = document.getElementById('freqTable').checked;
+    const showPerc = document.getElementById('freqPerc').checked;
+    const showCum = document.getElementById('freqCum').checked;
+    const showBar = document.getElementById('freqBar').checked;
+    const showPie = document.getElementById('freqPie').checked;
+
+    closeModal('frequenciesModal');
+    showLoading('Calculando frecuencias...');
+
+    setTimeout(() => {
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-chart-pie"></i> Frecuencias</div></div>`;
+
+        selectedVars.forEach(varName => {
+            const values = getValues(varName);
+            const freq = {};
+            values.forEach(v => freq[v] = (freq[v] || 0) + 1);
+            const total = values.length;
+            const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+
+            let cumFreq = 0, cumPerc = 0;
+
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-chart-bar"></i> ${escapeHtml(varName)} (N = ${total})</div>`;
+
+            if (showTable) {
+                html += `<table class="output-table"><thead><tr><th>Valor</th><th>Frecuencia</th>${showPerc ? '<th>Porcentaje</th>' : ''}${showCum ? '<th>Frec. Acum.</th><th>% Acum.</th>' : ''}</tr></thead><tbody>`;
+                sorted.forEach(([val, count]) => {
+                    cumFreq += count;
+                    const perc = (count / total * 100);
+                    cumPerc += perc;
+                    html += `<tr><td>${escapeHtml(String(val))}</td><td>${count}</td>`;
+                    if (showPerc) html += `<td>${perc.toFixed(1)}%</td>`;
+                    if (showCum) html += `<td>${cumFreq}</td><td>${cumPerc.toFixed(1)}%</td>`;
+                    html += `</tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+
+            html += `</div>`;
+
+            // Generate charts
+            if (showBar) {
+                setTimeout(() => generateChart('bar', varName), 100);
+            }
+            if (showPie) {
+                setTimeout(() => generateChart('pie', varName), 200);
+            }
+        });
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Frecuencias calculadas', 'success');
+        addToSyntax(`FREQUENCIES ${selectedVars.join(' ')}`);
+    }, 100);
+}
+
+// ==================== CROSSTABS ====================
+function runCrosstabs() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const rowVar = document.getElementById('crossRow').value;
+    const colVar = document.getElementById('crossCol').value;
+    const showChi = document.getElementById('crossChi').checked;
+    const showPerc = document.getElementById('crossPerc').checked;
+    const showExp = document.getElementById('crossExp').checked;
+
+    if (rowVar === colVar) { showToast('Las variables deben ser diferentes', 'warning'); return; }
+
+    closeModal('crosstabsModal');
+    showLoading('Calculando tablas de contingencia...');
+
+    setTimeout(() => {
+        const vals1 = getValues(rowVar);
+        const vals2 = getValues(colVar);
+        const n = Math.min(vals1.length, vals2.length);
+
+        const cats1 = [...new Set(vals1.slice(0, n))];
+        const cats2 = [...new Set(vals2.slice(0, n))];
+
+        const obs = {};
+        cats1.forEach(c1 => { obs[c1] = {}; cats2.forEach(c2 => obs[c1][c2] = 0); });
+        for (let i = 0; i < n; i++) {
+            const c1 = vals1[i], c2 = vals2[i];
+            if (obs[c1] && obs[c1][c2] !== undefined) obs[c1][c2]++;
+        }
+
+        const rowTotals = {};
+        const colTotals = {};
+        cats1.forEach(c1 => rowTotals[c1] = cats2.reduce((sum, c2) => sum + obs[c1][c2], 0));
+        cats2.forEach(c2 => colTotals[c2] = cats1.reduce((sum, c1) => sum + obs[c1][c2], 0));
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-table"></i> Tabla de Contingencia (${escapeHtml(rowVar)} × ${escapeHtml(colVar)})</div></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-table"></i> Frecuencias Observadas</div>`;
+        html += `<table class="output-table"><thead><tr><th>${escapeHtml(rowVar)} \ ${escapeHtml(colVar)}</th>${cats2.map(c => `<th>${escapeHtml(String(c))}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+        cats1.forEach(c1 => {
+            html += `<tr><td style="font-weight:700">${escapeHtml(String(c1))}</td>`;
+            cats2.forEach(c2 => {
+                let cell = `${obs[c1][c2]}`;
+                if (showPerc) cell += `<br><small>(${(obs[c1][c2] / rowTotals[c1] * 100).toFixed(1)}%)</small>`;
+                html += `<td>${cell}</td>`;
+            });
+            html += `<td style="font-weight:700">${rowTotals[c1]}</td></tr>`;
+        });
+        html += `<tr style="font-weight:700"><td>Total</td>${cats2.map(c2 => `<td>${colTotals[c2]}</td>`).join('')}<td>${n}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        if (showExp) {
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-table"></i> Frecuencias Esperadas</div>`;
+            html += `<table class="output-table"><thead><tr><th></th>${cats2.map(c => `<th>${escapeHtml(String(c))}</th>`).join('')}</tr></thead><tbody>`;
+            cats1.forEach(c1 => {
+                html += `<tr><td style="font-weight:700">${escapeHtml(String(c1))}</td>`;
+                cats2.forEach(c2 => html += `<td>${((rowTotals[c1] * colTotals[c2]) / n).toFixed(2)}</td>`);
+                html += `</tr>`;
+            });
+            html += `</tbody></table></div>`;
+        }
+
+        if (showChi) {
+            let chi2 = 0;
+            cats1.forEach(c1 => cats2.forEach(c2 => {
+                const exp = (rowTotals[c1] * colTotals[c2]) / n;
+                if (exp > 0) chi2 += Math.pow(obs[c1][c2] - exp, 2) / exp;
+            }));
+            const df = (cats1.length - 1) * (cats2.length - 1);
+            const pValue = 1 - chi2CDF(chi2, df);
+
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Prueba de Chi-Cuadrado</div>`;
+            html += `<table class="output-table"><thead><tr><th>Chi-Cuadrado</th><th>gl</th><th>Sig. Asintótica</th></tr></thead><tbody>`;
+            html += `<tr><td class="stat-value">${chi2.toFixed(4)}</td><td>${df}</td><td class="${pValue < 0.05 ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)}</td></tr>`;
+            html += `</tbody></table></div>`;
+        }
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Tablas de contingencia calculadas', 'success');
+        addToSyntax(`CROSSTABS ${rowVar} BY ${colVar}`);
+    }, 100);
+}
+
+// ==================== TRANSFORM ====================
+function runTransform() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const sourceVar = document.getElementById('transSource').value;
+    const targetName = document.getElementById('transTarget').value.trim() || `${sourceVar}_trans`;
+    const transType = document.getElementById('transType').value;
+    const formula = document.getElementById('transFormula').value;
+
+    closeModal('transformModal');
+    showLoading('Aplicando transformación...');
+
+    setTimeout(() => {
+        const values = getNumericValues(sourceVar);
+        const safeName = targetName.replace(/[^a-zA-Z0-9_]/g, '_');
+
+        let newValues;
+        switch(transType) {
+            case 'log': newValues = values.map(v => v > 0 ? Math.log(v) : null); break;
+            case 'log10': newValues = values.map(v => v > 0 ? Math.log10(v) : null); break;
+            case 'sqrt': newValues = values.map(v => v >= 0 ? Math.sqrt(v) : null); break;
+            case 'square': newValues = values.map(v => v * v); break;
+            case 'reciprocal': newValues = values.map(v => v !== 0 ? 1 / v : null); break;
+            case 'zscore': {
+                const m = mean(values), s = stdDev(values);
+                newValues = values.map(v => s !== 0 ? (v - m) / s : 0);
+                break;
+            }
+            case 'abs': newValues = values.map(v => Math.abs(v)); break;
+            case 'custom': {
+                newValues = values.map(v => {
+                    try { return eval(formula.replace(/x/g, v)); } catch(e) { return null; }
+                });
+                break;
+            }
+            default: newValues = values;
+        }
+
+        // Add new column
+        ds.variables.push({
+            name: safeName, type: 'numeric', width: 12, decimals: 4,
+            label: `${sourceVar} (${transType})`, values: '', measure: 'scale'
+        });
+
+        const sourceIdx = ds.variables.findIndex(v => v.name === sourceVar);
+        ds.data.forEach((row, i) => {
+            row.push(i < newValues.length && newValues[i] !== null ? newValues[i].toFixed(4) : '');
+        });
+
+        ds.colCount = ds.variables.length;
+        AppState.variables = [...ds.variables];
+        AppState.data = ds.data.map(r => [...r]);
+
+        renderDataTable();
+        renderVarTable();
+        updateSidebarVars();
+        updateDataInfo();
+        syncToSQLite();
+
+        hideLoading();
+        showToast(`Variable "${safeName}" creada con transformación ${transType}`, 'success');
+        addToSyntax(`COMPUTE ${safeName} = ${transType}(${sourceVar})`);
+    }, 100);
+}
+
+// ==================== CHARTS ====================
+function generateChart(type, preselectedVar = null) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    if (preselectedVar) {
+        // Direct chart generation
+        createChart(type, preselectedVar);
+        return;
+    }
+
+    // Show chart configuration modal
+    populateVarSelectors();
+    document.getElementById('chartTypeSelect').value = type;
+    showModal('chartModal');
+}
+
+function createChartFromModal() {
+    const type = document.getElementById('chartTypeSelect').value;
+    const varX = document.getElementById('chartVarX').value;
+    const varY = document.getElementById('chartVarY').value;
+    const groupVar = document.getElementById('chartGroup').value;
+    const title = document.getElementById('chartTitle').value || `${type} - ${varX}`;
+
+    closeModal('chartModal');
+    createChart(type, varX, varY, groupVar, title);
+}
+
+function createChart(type, varX, varY = null, groupVar = null, title = null) {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) return;
+
+    showLoading('Generando gráfico...');
+
+    setTimeout(() => {
+        const container = document.getElementById('chartsContainer');
+
+        // Remove empty state if present
+        if (container.querySelector('.empty-state')) {
+            container.innerHTML = '<div class="charts-grid" id="chartsGrid"></div>';
+        }
+
+        const grid = document.getElementById('chartsGrid');
+        const chartId = 'chart_' + Date.now();
+
+        const chartCard = document.createElement('div');
+        chartCard.className = 'chart-card';
+        chartCard.innerHTML = `
+            <div class="chart-card-title">
+                <span>${escapeHtml(title || `${type}: ${varX}`)}</span>
+                <button class="toolbar-btn danger" onclick="this.closest('.chart-card').remove()" style="padding:4px 8px;font-size:0.75rem"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="chart-wrapper"><canvas id="${chartId}"></canvas></div>
+        `;
+        grid.appendChild(chartCard);
+
+        const ctx = document.getElementById(chartId).getContext('2d');
+        let chartConfig;
+
+        const colors = ['#2980b9', '#e74c3c', '#27ae60', '#f39c12', '#8e44ad', '#16a085', '#d35400', '#2c3e50'];
+
+        switch(type) {
+            case 'histogram': {
+                const values = getNumericValues(varX);
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+                const bins = Math.min(20, Math.ceil(Math.sqrt(values.length)));
+                const binWidth = (max - min) / bins;
+                const counts = new Array(bins).fill(0);
+                const labels = [];
+
+                values.forEach(v => {
+                    const bin = Math.min(Math.floor((v - min) / binWidth), bins - 1);
+                    counts[bin]++;
+                });
+
+                for (let i = 0; i < bins; i++) {
+                    const start = (min + i * binWidth).toFixed(2);
+                    const end = (min + (i + 1) * binWidth).toFixed(2);
+                    labels.push(`${start}-${end}`);
+                }
+
+                chartConfig = {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label: 'Frecuencia', data: counts, backgroundColor: colors[0], borderColor: colors[0], borderWidth: 1 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: false } }, scales: { x: { title: { display: true, text: varX } }, y: { title: { display: true, text: 'Frecuencia' } } } }
+                };
+                break;
+            }
+
+            case 'boxplot': {
+                const values = getNumericValues(varX);
+                const s = [...values].sort((a, b) => a - b);
+                const q1 = percentile(values, 25);
+                const q3 = percentile(values, 75);
+                const med = median(values);
+                const iqr = q3 - q1;
+                const lowerFence = q1 - 1.5 * iqr;
+                const upperFence = q3 + 1.5 * iqr;
+                const outliers = values.filter(v => v < lowerFence || v > upperFence);
+                const minVal = Math.max(Math.min(...values), lowerFence);
+                const maxVal = Math.min(Math.max(...values), upperFence);
+
+                chartConfig = {
+                    type: 'bar',
+                    data: { labels: [varX], datasets: [
+                        { label: 'Min-Q1', data: [q1 - minVal], backgroundColor: colors[0], stack: 'stack1' },
+                        { label: 'Q1-Med', data: [med - q1], backgroundColor: colors[1], stack: 'stack1' },
+                        { label: 'Med-Q3', data: [q3 - med], backgroundColor: colors[1], stack: 'stack1' },
+                        { label: 'Q3-Max', data: [maxVal - q3], backgroundColor: colors[0], stack: 'stack1' }
+                    ]},
+                    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { title: { display: false } }, scales: { x: { min: minVal, max: maxVal } } }
+                };
+                break;
+            }
+
+            case 'scatter': {
+                const xValues = getNumericValues(varX);
+                const yValues = varY ? getNumericValues(varY) : xValues.map((_, i) => i + 1);
+                const n = Math.min(xValues.length, yValues.length);
+
+                chartConfig = {
+                    type: 'scatter',
+                    data: { datasets: [{ label: `${varX} vs ${varY || 'Índice'}`, data: xValues.slice(0, n).map((x, i) => ({x, y: yValues[i]})), backgroundColor: colors[0], pointRadius: 5 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: false } }, scales: { x: { title: { display: true, text: varX }, type: 'linear', position: 'bottom' }, y: { title: { display: true, text: varY || 'Índice' } } } }
+                };
+                break;
+            }
+
+            case 'bar': {
+                const values = getValues(varX);
+                const freq = {};
+                values.forEach(v => freq[v] = (freq[v] || 0) + 1);
+                const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+
+                chartConfig = {
+                    type: 'bar',
+                    data: { labels: sorted.map(([k]) => String(k)), datasets: [{ label: 'Frecuencia', data: sorted.map(([,v]) => v), backgroundColor: colors, borderWidth: 1 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: false } }, scales: { y: { beginAtZero: true } } }
+                };
+                break;
+            }
+
+            case 'pie': {
+                const values = getValues(varX);
+                const freq = {};
+                values.forEach(v => freq[v] = (freq[v] || 0) + 1);
+                const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+
+                chartConfig = {
+                    type: 'pie',
+                    data: { labels: sorted.map(([k]) => String(k)), datasets: [{ data: sorted.map(([,v]) => v), backgroundColor: colors, borderWidth: 1 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: false }, legend: { position: 'right' } } }
+                };
+                break;
+            }
+
+            case 'line': {
+                const values = getNumericValues(varX);
+                chartConfig = {
+                    type: 'line',
+                    data: { labels: values.map((_, i) => i + 1), datasets: [{ label: varX, data: values, borderColor: colors[0], backgroundColor: colors[0] + '20', fill: true, tension: 0.1 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: false } }, scales: { y: { beginAtZero: false } } }
+                };
+                break;
+            }
+        }
+
+        if (chartConfig) {
+            new Chart(ctx, chartConfig);
+            AppState.charts.push({ id: chartId, type, varX, varY, groupVar });
+        }
+
+        hideLoading();
+        switchTab('charts');
+        showToast(`Gráfico ${type} generado`, 'success');
+    }, 100);
+}
+
+function clearCharts() {
+    document.getElementById('chartsContainer').innerHTML = `
+        <div class="empty-state"><i class="fas fa-chart-area"></i><h3>Sin gráficos</h3><p>Genera gráficos desde el menú Gráficos o el panel lateral.</p></div>
+    `;
+    AppState.charts = [];
+    showToast('Gráficos eliminados', 'success');
+}
+
+function exportCharts() {
+    const canvases = document.querySelectorAll('#chartsContainer canvas');
+    if (canvases.length === 0) { showToast('No hay gráficos para exportar', 'warning'); return; }
+
+    canvases.forEach((canvas, i) => {
+        const link = document.createElement('a');
+        link.download = `chart_${i + 1}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+    showToast('Gráficos exportados como PNG', 'success');
+}
+
+// ==================== SYNTAX ENGINE ====================
+function runAllSyntax() {
+    const editor = document.getElementById('syntaxEditor');
+    const code = editor.value.trim();
+    if (!code) { showToast('Escribe comandos de sintaxis primero', 'warning'); return; }
+
+    const output = document.getElementById('syntaxOutput');
+    output.innerHTML = '';
+
+    const lines = code.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+
+    lines.forEach((line, idx) => {
+        try {
+            const result = parseAndExecuteSyntax(line);
+            appendSyntaxOutput(`> ${line}`, 'info');
+            if (result) appendSyntaxOutput(result, 'success');
+        } catch (err) {
+            appendSyntaxOutput(`> ${line}`, 'info');
+            appendSyntaxOutput(`ERROR: ${err.message}`, 'error');
+        }
+    });
+
+    showToast('Sintaxis ejecutada', 'success');
+}
+
+function parseAndExecuteSyntax(line) {
+    const upper = line.toUpperCase();
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) throw new Error('No hay datos cargados');
+
+    // DESCRIPTIVES var1 var2
+    if (upper.startsWith('DESCRIPTIVES')) {
+        const vars = line.substring(12).trim().split(/\s+/);
+        // Trigger descriptives for these vars
+        document.querySelectorAll('#descVarSelector input').forEach(cb => cb.checked = false);
+        vars.forEach(v => {
+            const cb = document.querySelector(`#descVarSelector input[value="${v}"]`);
+            if (cb) cb.checked = true;
+        });
+        runDescriptives();
+        return 'Descriptivos ejecutados';
+    }
+
+    // FREQUENCIES var1
+    if (upper.startsWith('FREQUENCIES')) {
+        const vars = line.substring(11).trim().split(/\s+/);
+        document.querySelectorAll('#freqVarSelector input').forEach(cb => cb.checked = false);
+        vars.forEach(v => {
+            const cb = document.querySelector(`#freqVarSelector input[value="${v}"]`);
+            if (cb) cb.checked = true;
+        });
+        runFrequencies();
+        return 'Frecuencias ejecutadas';
+    }
+
+    // TTEST
+    if (upper.startsWith('TTEST')) {
+        // Parse TTEST syntax
+        const groupsMatch = line.match(/GROUPS=(\w+)\(([^)]+)\)/);
+        const varsMatch = line.match(/VARIABLES=(\w+)/);
+
+        if (groupsMatch && varsMatch) {
+            document.getElementById('ttestType').value = 'independent';
+            document.getElementById('ttestVariable').value = varsMatch[1];
+            document.getElementById('ttestGroupVariable').value = groupsMatch[1];
+            updateTTestUI();
+            runTTest();
+            return 'T-Test independiente ejecutado';
+        }
+
+        const pairedMatch = line.match(/PAIRS=(\w+)\s+WITH\s+(\w+)/);
+        if (pairedMatch) {
+            document.getElementById('ttestType').value = 'paired';
+            document.getElementById('ttestVariable').value = pairedMatch[1];
+            document.getElementById('ttestVariable2').value = pairedMatch[2];
+            updateTTestUI();
+            runTTest();
+            return 'T-Test pareado ejecutado';
+        }
+
+        const testvalMatch = line.match(/TESTVAL=([\d.]+)/);
+        if (testvalMatch && varsMatch) {
+            document.getElementById('ttestType').value = 'one-sample';
+            document.getElementById('ttestTestValue').value = testvalMatch[1];
+            document.getElementById('ttestVariable').value = varsMatch[1];
+            updateTTestUI();
+            runTTest();
+            return 'T-Test one-sample ejecutado';
+        }
+
+        throw new Error('Sintaxis TTEST no reconocida');
+    }
+
+    // ANOVA dv BY factor
+    if (upper.startsWith('ANOVA')) {
+        const match = line.match(/ANOVA\s+(\w+)\s+BY\s+(\w+)/i);
+        if (match) {
+            document.getElementById('anovaDV').value = match[1];
+            document.getElementById('anovaFactor').value = match[2];
+            runANOVA();
+            return 'ANOVA ejecutado';
+        }
+        throw new Error('Sintaxis ANOVA: ANOVA dv BY factor');
+    }
+
+    // CORRELATIONS var1 var2
+    if (upper.startsWith('CORRELATIONS')) {
+        const vars = line.substring(12).trim().split(/\s+/);
+        document.querySelectorAll('#corrVarSelector input').forEach(cb => cb.checked = false);
+        vars.forEach(v => {
+            const cb = document.querySelector(`#corrVarSelector input[value="${v}"]`);
+            if (cb) cb.checked = true;
+        });
+        runCorrelation();
+        return 'Correlaciones ejecutadas';
+    }
+
+    // REGRESSION /DEPENDENT=y /METHOD=ENTER x1 x2
+    if (upper.startsWith('REGRESSION')) {
+        const depMatch = line.match(/DEPENDENT=(\w+)/);
+        const methodMatch = line.match(/METHOD=ENTER\s+(.+)/);
+        if (depMatch && methodMatch) {
+            document.getElementById('regDV').value = depMatch[1];
+            const ivs = methodMatch[1].trim().split(/\s+/);
+            document.querySelectorAll('#regIVSelector input').forEach(cb => cb.checked = false);
+            ivs.forEach(v => {
+                const cb = document.querySelector(`#regIVSelector input[value="${v}"]`);
+                if (cb) cb.checked = true;
+            });
+            runRegression();
+            return 'Regresión ejecutada';
+        }
+        throw new Error('Sintaxis REGRESSION: REGRESSION /DEPENDENT=y /METHOD=ENTER x1 x2');
+    }
+
+    // CROSSTABS row BY col
+    if (upper.startsWith('CROSSTABS')) {
+        const match = line.match(/CROSSTABS\s+(\w+)\s+BY\s+(\w+)/i);
+        if (match) {
+            document.getElementById('crossRow').value = match[1];
+            document.getElementById('crossCol').value = match[2];
+            runCrosstabs();
+            return 'Tablas de contingencia ejecutadas';
+        }
+        throw new Error('Sintaxis CROSSTABS: CROSSTABS row BY col');
+    }
+
+    // CHISQUARE var1 var2
+    if (upper.startsWith('CHISQUARE')) {
+        const vars = line.substring(9).trim().split(/\s+/);
+        if (vars.length >= 2) {
+            document.getElementById('chisqVar1').value = vars[0];
+            document.getElementById('chisqVar2').value = vars[1];
+            runChiSquare();
+            return 'Chi-Cuadrado ejecutado';
+        }
+        throw new Error('Sintaxis CHISQUARE: CHISQUARE var1 var2');
+    }
+
+    // COMPUTE newvar = expression
+    if (upper.startsWith('COMPUTE')) {
+        const match = line.match(/COMPUTE\s+(\w+)\s*=\s*(.+)/i);
+        if (match) {
+            // Simple compute - would need full expression parser
+            showToast('COMPUTE requiere interfaz gráfica de transformación', 'warning');
+            return 'Use el diálogo de Transformar Variable';
+        }
+    }
+
+    throw new Error('Comando no reconocido: ' + line);
+}
+
+function appendSyntaxOutput(text, type) {
+    const output = document.getElementById('syntaxOutput');
+    const line = document.createElement('div');
+    line.className = type;
+    line.textContent = text;
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+}
+
+function clearSyntax() {
+    document.getElementById('syntaxEditor').value = '';
+}
+
+function clearSyntaxOutput() {
+    document.getElementById('syntaxOutput').innerHTML = '<span class="info">// Output de sintaxis aparecerá aquí...</span>';
+}
+
+function saveSyntax() {
+    const code = document.getElementById('syntaxEditor').value;
+    const blob = new Blob([code], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'syntax.sps';
+    link.click();
+    showToast('Sintaxis guardada', 'success');
+}
+
+function loadSyntax() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.sps,.txt';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            document.getElementById('syntaxEditor').value = ev.target.result;
+            showToast('Sintaxis cargada', 'success');
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function addToSyntax(command) {
+    const editor = document.getElementById('syntaxEditor');
+    const current = editor.value;
+    editor.value = current + (current ? '\n' : '') + command;
+}
+
+// ==================== OUTPUT MANAGEMENT ====================
+function appendToOutput(html) {
+    const container = document.getElementById('outputContainer');
+
+    // Remove empty state if present
+    if (container.querySelector('.empty-state')) {
+        container.innerHTML = '';
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+
+    AppState.outputHistory.push(html);
+}
+
+function clearOutput() {
+    document.getElementById('outputContainer').innerHTML = `
+        <div class="empty-state"><i class="fas fa-chart-bar"></i><h3>Sin resultados</h3><p>Ejecuta un análisis estadístico para ver los resultados aquí.</p></div>
+    `;
+    AppState.outputHistory = [];
+    showToast('Output limpiado', 'success');
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+function formatNumber(num, decimals = 4) {
+    if (num === null || num === undefined || isNaN(num)) return 'N/A';
+    return num.toFixed(decimals);
+}
+</script>
+</body>
+</html>

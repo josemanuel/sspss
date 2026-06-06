@@ -232,6 +232,7 @@
                     <div class="dropdown-header">Correlación y Regresión</div>
                     <div class="dropdown-item" onclick="showCorrelationDialog()"><i class="fas fa-project-diagram"></i> Correlaciones</div>
                     <div class="dropdown-item" onclick="showRegressionDialog()"><i class="fas fa-chart-line"></i> Regresión Lineal</div>
+                    <div class="dropdown-item" onclick="showLogisticRegressionDialog()"><i class="fas fa-wave-square"></i> Regresión Logística</div>
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-header">No Paramétricos</div>
                     <div class="dropdown-item" onclick="showChiSquareDialog()"><i class="fas fa-check-square"></i> Chi-Cuadrado</div>
@@ -271,7 +272,8 @@
                     <button class="sidebar-btn" onclick="showDescriptivesDialog()"><i class="fas fa-list-ol"></i> Descriptivos</button>
                     <button class="sidebar-btn" onclick="showFrequenciesDialog()"><i class="fas fa-chart-pie"></i> Frecuencias</button>
                     <button class="sidebar-btn" onclick="showCorrelationDialog()"><i class="fas fa-project-diagram"></i> Correlaciones</button>
-                    <button class="sidebar-btn" onclick="showRegressionDialog()"><i class="fas fa-chart-line"></i> Regresión</button>
+                    <button class="sidebar-btn" onclick="showRegressionDialog()"><i class="fas fa-chart-line"></i> Regresión Lineal</button>
+                    <button class="sidebar-btn" onclick="showLogisticRegressionDialog()"><i class="fas fa-wave-square"></i> Regresión Logística</button>
                 </div>
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">Variables del Dataset</div>
@@ -523,6 +525,24 @@
         </div>
     </div>
 
+    <!-- Logistic Regression Modal -->
+    <div class="modal-overlay" id="logisticModal">
+        <div class="modal">
+            <div class="modal-header"><span class="modal-title"><i class="fas fa-wave-square"></i> Regresión Logística</span><button class="modal-close" onclick="closeModal('logisticModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable Dependiente (Y) — binaria (0/1):</label><select class="form-select" id="logDV"></select><p class="form-hint">La variable debe tener exactamente 2 valores distintos (ej: 0/1, Sí/No)</p></div>
+                <div class="form-group"><label class="form-label">Valores de referencia:</label><div style="display:flex;gap:10px;"><input type="text" class="form-input" id="logRef0" placeholder="Valor para 0 (ej: No)" style="flex:1"><input type="text" class="form-input" id="logRef1" placeholder="Valor para 1 (ej: Sí)" style="flex:1"></div></div>
+                <div class="form-group"><label class="form-label">Variables Independientes (X):</label><div class="var-selector" id="logIVSelector"></div></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="logAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></div>
+                <div class="form-group"><label class="form-label">Máximo de iteraciones:</label><input type="number" class="form-input" id="logMaxIter" value="50" min="10" max="500"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('logisticModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runLogisticRegression()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="transformModal">
         <div class="modal">
             <div class="modal-header"><span class="modal-title"><i class="fas fa-calculator"></i> Transformar Variable</span><button class="modal-close" onclick="closeModal('transformModal')">&times;</button></div>
@@ -626,7 +646,7 @@
                     <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 10px;"><i class="fas fa-user"></i> Autor</h3>
                     <p style="font-size: 0.95rem; line-height: 1.6; margin: 0;">
                         <strong>Dr. José Manuel Fernández Carreira</strong><br>
-                        <span style="color: var(--text-muted); font-size: 0.85rem;">https://orcid.org/0000-0002-4097-3224</span>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">Desarrollador &amp; Investigador en Métodos Cuantitativos</span>
                     </p>
                 </div>
 
@@ -1514,6 +1534,10 @@ function populateVarSelectors() {
     // Transform
     document.getElementById('transSource').innerHTML = makeOptions(numericVars);
 
+    // Logistic Regression
+    document.getElementById('logDV').innerHTML = makeOptions(allVars);
+    document.getElementById('logIVSelector').innerHTML = makeCheckboxes(numericVars, 'log');
+
     // Charts
     document.getElementById('chartVarX').innerHTML = makeOptions(allVars);
     document.getElementById('chartVarY').innerHTML = '<option value="">-- Ninguna --</option>' + makeOptions(numericVars);
@@ -1537,6 +1561,7 @@ function showChiSquareDialog() { populateVarSelectors(); showModal('chisqModal')
 function showFrequenciesDialog() { populateVarSelectors(); showModal('frequenciesModal'); }
 function showCrosstabsDialog() { populateVarSelectors(); showModal('crosstabsModal'); }
 function showTransformDialog() { populateVarSelectors(); showModal('transformModal'); }
+function showLogisticRegressionDialog() { populateVarSelectors(); showModal('logisticModal'); }
 function showNewDatasetDialog() { const name = prompt('Nombre del nuevo dataset:'); if (name) createDataset(name); }
 function showImportSQLDialog() { document.getElementById('fileInput').accept = '.db,.sqlite,.sqlite3'; document.getElementById('fileInput').click(); document.getElementById('fileInput').accept = '.xlsx,.xls,.csv,.db,.sqlite,.sqlite3'; }
 function showHelpDialog() { showModal('helpModal'); }
@@ -2188,6 +2213,363 @@ function runRegression() {
         showToast('Regresión calculada', 'success');
         addToSyntax(`REGRESSION /DEPENDENT=${dvName} /METHOD=ENTER ${selectedIVs.join(' ')}`);
     }, 100);
+}
+
+// ==================== LOGISTIC REGRESSION (IRLS) ====================
+function runLogisticRegression() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const dvName = document.getElementById('logDV').value;
+    const selectedIVs = [];
+    document.querySelectorAll('#logIVSelector input:checked').forEach(cb => selectedIVs.push(cb.value));
+    if (selectedIVs.length === 0) { showToast('Selecciona al menos una variable independiente', 'warning'); return; }
+    if (selectedIVs.includes(dvName)) { showToast('La variable dependiente no puede ser independiente', 'warning'); return; }
+
+    const alpha = parseFloat(document.getElementById('logAlpha').value);
+    const maxIter = parseInt(document.getElementById('logMaxIter').value) || 50;
+    const ref0 = document.getElementById('logRef0').value || '0';
+    const ref1 = document.getElementById('logRef1').value || '1';
+
+    closeModal('logisticModal');
+    showLoading('Calculando regresión logística (IRLS)...');
+
+    setTimeout(() => {
+        // Get dependent variable values
+        const dvValues = getValues(dvName);
+        const uniqueVals = [...new Set(dvValues)];
+
+        if (uniqueVals.length !== 2) {
+            hideLoading();
+            showToast(`La variable "${dvName}" debe ser binaria (tiene ${uniqueVals.length} valores únicos)`, 'error');
+            return;
+        }
+
+        // Map to 0/1
+        const val0 = uniqueVals[0];
+        const val1 = uniqueVals[1];
+        const y = dvValues.map(v => v === val1 ? 1 : 0);
+
+        // Get independent variables
+        const X = selectedIVs.map(iv => getNumericValues(iv));
+        const n = Math.min(y.length, ...X.map(x => x.length));
+
+        // Trim to same length
+        const yTrim = y.slice(0, n);
+        const XTrim = X.map(x => x.slice(0, n));
+
+        // Standardize continuous predictors for numerical stability
+        const XStandardized = XTrim.map(col => {
+            const m = mean(col);
+            const s = stdDev(col);
+            if (s === 0) return col.map(() => 0);
+            return col.map(v => (v - m) / s);
+        });
+        const standardizationParams = XTrim.map(col => {
+            const m = mean(col);
+            const s = stdDev(col);
+            return { mean: m, std: s };
+        });
+
+        // Build design matrix with intercept
+        const designMatrix = [];
+        for (let i = 0; i < n; i++) {
+            designMatrix.push([1, ...XStandardized.map(col => col[i])]);
+        }
+
+        const p = selectedIVs.length + 1; // parameters (intercept + IVs)
+
+        // IRLS Algorithm
+        let beta = new Array(p).fill(0);
+        let converged = false;
+        let iterations = 0;
+        const tolerance = 1e-6;
+
+        for (let iter = 0; iter < maxIter; iter++) {
+            // Compute probabilities (sigmoid)
+            const pi = designMatrix.map(row => {
+                const z = row.reduce((sum, val, idx) => sum + val * beta[idx], 0);
+                return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, z)))); // clamp for stability
+            });
+
+            // Weights (W = diag(pi * (1 - pi)))
+            const W = pi.map(pii => pii * (1 - pii));
+
+            // Check for complete separation
+            if (W.every(w => w < 1e-10)) {
+                hideLoading();
+                showToast('Advertencia: posible separación completa. Los coeficientes pueden ser inestables.', 'warning');
+                break;
+            }
+
+            // Working response: z = X*beta + W^(-1) * (y - pi)
+            const z = [];
+            for (let i = 0; i < n; i++) {
+                const eta = designMatrix[i].reduce((sum, val, idx) => sum + val * beta[idx], 0);
+                z.push(eta + (yTrim[i] - pi[i]) / (W[i] + 1e-10));
+            }
+
+            // Weighted least squares: (X'WX)^(-1) X'Wz
+            const XtWX = [];
+            for (let i = 0; i < p; i++) {
+                XtWX[i] = [];
+                for (let j = 0; j < p; j++) {
+                    XtWX[i][j] = designMatrix.reduce((sum, row, idx) => sum + row[i] * W[idx] * row[j], 0);
+                }
+            }
+
+            const XtWz = [];
+            for (let i = 0; i < p; i++) {
+                XtWz[i] = designMatrix.reduce((sum, row, idx) => sum + row[i] * W[idx] * z[idx], 0);
+            }
+
+            const newBeta = solveLinearSystem(XtWX, XtWz);
+
+            // Check convergence
+            const diff = newBeta.reduce((sum, b, idx) => sum + Math.abs(b - beta[idx]), 0);
+            beta = newBeta;
+            iterations = iter + 1;
+
+            if (diff < tolerance) {
+                converged = true;
+                break;
+            }
+        }
+
+        // Transform coefficients back to original scale
+        const betaOriginal = [...beta];
+        for (let i = 1; i < p; i++) {
+            const sp = standardizationParams[i - 1];
+            if (sp.std !== 0) {
+                betaOriginal[i] = beta[i] / sp.std;
+                betaOriginal[0] -= beta[i] * sp.mean / sp.std;
+            }
+        }
+
+        // Compute final probabilities and statistics
+        const piFinal = designMatrix.map(row => {
+            const z = row.reduce((sum, val, idx) => sum + val * beta[idx], 0);
+            return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, z))));
+        });
+
+        // Log-likelihood
+        let logLik = 0;
+        for (let i = 0; i < n; i++) {
+            const pii = Math.max(1e-10, Math.min(1 - 1e-10, piFinal[i]));
+            logLik += yTrim[i] * Math.log(pii) + (1 - yTrim[i]) * Math.log(1 - pii);
+        }
+
+        // Null model log-likelihood (intercept only)
+        const yMean = mean(yTrim.map(Number));
+        let logLikNull = 0;
+        for (let i = 0; i < n; i++) {
+            const p0 = Math.max(1e-10, Math.min(1 - 1e-10, yMean));
+            logLikNull += yTrim[i] * Math.log(p0) + (1 - yTrim[i]) * Math.log(1 - p0);
+        }
+
+        // Deviance and pseudo R² measures
+        const deviance = -2 * logLik;
+        const nullDeviance = -2 * logLikNull;
+        const mcFaddenR2 = 1 - (logLik / logLikNull);
+        const nagelkerkeR2 = mcFaddenR2 / (1 - Math.exp(2 * logLikNull / n));
+
+        // Likelihood Ratio Test (Model Chi-Square)
+        const lrChi2 = nullDeviance - deviance;
+        const lrDF = selectedIVs.length;
+        const lrP = 1 - chi2CDF(lrChi2, lrDF);
+
+        // Information criteria
+        const aic = -2 * logLik + 2 * p;
+        const bic = -2 * logLik + p * Math.log(n);
+
+        // Standard errors (from Fisher information matrix on standardized scale, then transform)
+        const XtWX = [];
+        for (let i = 0; i < p; i++) {
+            XtWX[i] = [];
+            for (let j = 0; j < p; j++) {
+                XtWX[i][j] = designMatrix.reduce((sum, row, idx) => sum + row[i] * piFinal[idx] * (1 - piFinal[idx]) * row[j], 0);
+            }
+        }
+
+        // Inverse of Fisher info for standardized coefficients
+        const fisherInv = matrixInverse(XtWX);
+        const seStandardized = fisherInv.map((row, i) => Math.sqrt(Math.max(0, row[i])));
+
+        // Transform SE to original scale
+        const seOriginal = [...seStandardized];
+        for (let i = 1; i < p; i++) {
+            const sp = standardizationParams[i - 1];
+            if (sp.std !== 0) {
+                seOriginal[i] = seStandardized[i] / sp.std;
+            }
+        }
+        // Intercept SE transformation is complex; use approximation
+        seOriginal[0] = seStandardized[0]; // Approximation
+
+        // Wald statistics
+        const waldZ = betaOriginal.map((b, i) => b / (seOriginal[i] + 1e-10));
+        const waldP = waldZ.map(z => 2 * (1 - tCDF(Math.abs(z), n - p)));
+
+        // Odds ratios
+        const oddsRatios = betaOriginal.map((b, i) => i === 0 ? null : Math.exp(b));
+        const ci95LowerOR = betaOriginal.map((b, i) => i === 0 ? null : Math.exp(b - 1.96 * seOriginal[i]));
+        const ci95UpperOR = betaOriginal.map((b, i) => i === 0 ? null : Math.exp(b + 1.96 * seOriginal[i]));
+
+        // Classification table
+        let tp = 0, fp = 0, tn = 0, fn = 0;
+        for (let i = 0; i < n; i++) {
+            const predicted = piFinal[i] >= 0.5 ? 1 : 0;
+            if (yTrim[i] === 1 && predicted === 1) tp++;
+            else if (yTrim[i] === 0 && predicted === 1) fp++;
+            else if (yTrim[i] === 0 && predicted === 0) tn++;
+            else if (yTrim[i] === 1 && predicted === 0) fn++;
+        }
+        const accuracy = (tp + tn) / n;
+        const sensitivity = tp / (tp + fn + 1e-10);
+        const specificity = tn / (tn + fp + 1e-10);
+        const precision = tp / (tp + fp + 1e-10);
+
+        // Hosmer-Lemeshow test (simplified with 10 bins)
+        const pairs = piFinal.map((pii, i) => ({ prob: pii, actual: yTrim[i] }));
+        pairs.sort((a, b) => a.prob - b.prob);
+        const bins = 10;
+        const binSize = Math.floor(n / bins);
+        let hlChi2 = 0;
+        for (let b = 0; b < bins; b++) {
+            const start = b * binSize;
+            const end = b === bins - 1 ? n : (b + 1) * binSize;
+            const binPairs = pairs.slice(start, end);
+            const observed = binPairs.filter(p => p.actual === 1).length;
+            const expected = binPairs.reduce((sum, p) => sum + p.prob, 0);
+            const binN = binPairs.length;
+            if (expected > 0 && expected < binN) {
+                hlChi2 += Math.pow(observed - expected, 2) / (expected * (1 - expected / binN) + 1e-10);
+            }
+        }
+        const hlDF = bins - 2;
+        const hlP = 1 - chi2CDF(hlChi2, hlDF);
+
+        // Build output
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-wave-square"></i> Regresión Logística Binaria (${escapeHtml(dvName)} = ${escapeHtml(String(val1))})</div></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Información del Modelo</div>`;
+        html += `<table class="output-table"><thead><tr><th>Criterio</th><th>Valor</th></tr></thead><tbody>`;
+        html += `<tr><td>-2 Log-Likelihood</td><td class="stat-value">${(-2 * logLik).toFixed(4)}</td></tr>`;
+        html += `<tr><td>R² de McFadden</td><td class="stat-value">${mcFaddenR2.toFixed(4)}</td></tr>`;
+        html += `<tr><td>R² de Nagelkerke</td><td class="stat-value">${nagelkerkeR2.toFixed(4)}</td></tr>`;
+        html += `<tr><td>AIC</td><td class="stat-value">${aic.toFixed(4)}</td></tr>`;
+        html += `<tr><td>BIC</td><td class="stat-value">${bic.toFixed(4)}</td></tr>`;
+        html += `<tr><td>Iteraciones</td><td class="stat-value">${iterations}${converged ? ' (convergido)' : ' (no convergido)'}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Prueba de Razón de Verosimilitud (Modelo)</div>`;
+        html += `<table class="output-table"><thead><tr><th>Paso</th><th>Chi-cuadrado</th><th>gl</th><th>Sig.</th></tr></thead><tbody>`;
+        html += `<tr><td>1</td><td class="stat-value">${lrChi2.toFixed(4)}</td><td>${lrDF}</td><td class="${lrP < alpha ? 'p-sig' : 'p-ns'}">${lrP.toFixed(4)}</td></tr>`;
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: Todos los coeficientes = 0 | α = ${alpha}</p>`;
+        html += `</div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-sliders-h"></i> Variables en la Ecuación</div>`;
+        html += `<table class="output-table"><thead><tr><th>Variable</th><th>B</th><th>Error Est.</th><th>Wald</th><th>gl</th><th>Sig.</th><th>Exp(B)</th><th>IC 95% Exp(B)</th></tr></thead><tbody>`;
+        html += `<tr><td style="font-weight:700">(Constante)</td><td class="stat-value">${betaOriginal[0].toFixed(4)}</td><td class="stat-value">${seOriginal[0].toFixed(4)}</td><td class="stat-value">${Math.pow(waldZ[0], 2).toFixed(4)}</td><td>1</td><td class="${waldP[0] < alpha ? 'p-sig' : 'p-ns'}">${waldP[0].toFixed(4)}</td><td class="stat-value">—</td><td class="stat-value">—</td></tr>`;
+        selectedIVs.forEach((iv, i) => {
+            const idx = i + 1;
+            html += `<tr><td style="font-weight:700">${escapeHtml(iv)}</td><td class="stat-value">${betaOriginal[idx].toFixed(4)}</td><td class="stat-value">${seOriginal[idx].toFixed(4)}</td><td class="stat-value">${Math.pow(waldZ[idx], 2).toFixed(4)}</td><td>1</td><td class="${waldP[idx] < alpha ? 'p-sig' : 'p-ns'}">${waldP[idx].toFixed(4)}</td><td class="stat-value">${oddsRatios[idx].toFixed(4)}</td><td class="stat-value">[${ci95LowerOR[idx].toFixed(4)}, ${ci95UpperOR[idx].toFixed(4)}]</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-check-square"></i> Tabla de Clasificación (punto de corte = 0.50)</div>`;
+        html += `<table class="output-table"><thead><tr><th colspan="2" rowspan="2"></th><th colspan="2">Predicho</th><th rowspan="2">% Correcto</th></tr><tr><th>${escapeHtml(String(val0))} (0)</th><th>${escapeHtml(String(val1))} (1)</th></tr></thead><tbody>`;
+        html += `<tr><td rowspan="2" style="font-weight:700">Observado</td><td style="font-weight:700">${escapeHtml(String(val0))} (0)</td><td>${tn}</td><td>${fp}</td><td>${(tn / (tn + fp + 1e-10) * 100).toFixed(1)}%</td></tr>`;
+        html += `<tr><td style="font-weight:700">${escapeHtml(String(val1))} (1)</td><td>${fn}</td><td>${tp}</td><td>${(tp / (tp + fn + 1e-10) * 100).toFixed(1)}%</td></tr>`;
+        html += `<tr style="font-weight:700"><td colspan="2">% Global</td><td colspan="2"></td><td>${(accuracy * 100).toFixed(1)}%</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-ruler-combined"></i> Métricas de Clasificación</div>`;
+        html += `<table class="output-table"><thead><tr><th>Métrica</th><th>Valor</th></tr></thead><tbody>`;
+        html += `<tr><td>Precisión (Accuracy)</td><td class="stat-value">${(accuracy * 100).toFixed(2)}%</td></tr>`;
+        html += `<tr><td>Sensibilidad (Recall)</td><td class="stat-value">${(sensitivity * 100).toFixed(2)}%</td></tr>`;
+        html += `<tr><td>Especificidad</td><td class="stat-value">${(specificity * 100).toFixed(2)}%</td></tr>`;
+        html += `<tr><td>Precisión Positiva (Precision)</td><td class="stat-value">${(precision * 100).toFixed(2)}%</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-vial"></i> Prueba de Hosmer-Lemeshow</div>`;
+        html += `<table class="output-table"><thead><tr><th>Chi-cuadrado</th><th>gl</th><th>Sig.</th></tr></thead><tbody>`;
+        html += `<tr><td class="stat-value">${hlChi2.toFixed(4)}</td><td>${hlDF}</td><td class="${hlP < alpha ? 'p-sig' : 'p-ns'}">${hlP.toFixed(4)}</td></tr>`;
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: El modelo se ajusta bien a los datos (p > 0.05 indica buen ajuste)</p>`;
+        html += `</div>`;
+
+        // Equation
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-function"></i> Ecuación del Modelo</div>`;
+        let eq = `ln( P(${escapeHtml(String(val1))}) / (1 - P(${escapeHtml(String(val1))})) ) = ${betaOriginal[0].toFixed(4)}`;
+        selectedIVs.forEach((iv, i) => {
+            const sign = betaOriginal[i + 1] >= 0 ? ' + ' : ' - ';
+            eq += `${sign}${Math.abs(betaOriginal[i + 1]).toFixed(4)}·${escapeHtml(iv)}`;
+        });
+        html += `<p style="font-family:monospace;font-size:0.95rem;background:#f8f9fa;padding:12px;border-radius:6px;line-height:1.8;">${eq}</p>`;
+        html += `</div>`;
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast(`Regresión logística completada (${iterations} iteraciones)`, 'success');
+        addToSyntax(`LOGISTIC REGRESSION ${dvName} WITH ${selectedIVs.join(' ')}`);
+    }, 100);
+}
+
+// Matrix inverse for logistic regression SE (Gaussian elimination on augmented matrix)
+function matrixInverse(A) {
+    const n = A.length;
+    // Create augmented matrix [A | I]
+    const aug = [];
+    for (let i = 0; i < n; i++) {
+        aug[i] = [];
+        for (let j = 0; j < n; j++) aug[i][j] = A[i][j];
+        for (let j = 0; j < n; j++) aug[i][n + j] = (i === j) ? 1 : 0;
+    }
+
+    // Gaussian elimination
+    for (let i = 0; i < n; i++) {
+        // Partial pivoting
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
+        }
+        [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
+
+        if (Math.abs(aug[i][i]) < 1e-10) continue;
+
+        // Normalize pivot row
+        const pivot = aug[i][i];
+        for (let j = i; j < 2 * n; j++) aug[i][j] /= pivot;
+
+        // Eliminate column
+        for (let k = 0; k < n; k++) {
+            if (k === i) continue;
+            const factor = aug[k][i];
+            for (let j = i; j < 2 * n; j++) {
+                aug[k][j] -= factor * aug[i][j];
+            }
+        }
+    }
+
+    // Extract inverse
+    const inv = [];
+    for (let i = 0; i < n; i++) {
+        inv[i] = [];
+        for (let j = 0; j < n; j++) {
+            inv[i][j] = aug[i][n + j];
+        }
+    }
+    return inv;
 }
 
 // Gaussian elimination for solving linear system

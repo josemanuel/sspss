@@ -186,6 +186,7 @@
         @media (max-width: 768px) { .main-menu { display: none; } .header-actions { gap: 4px; } .header-btn span { display: none; } .header-btn { padding: 8px; } .content-tabs { padding: 0 8px; } .tab-btn { padding: 8px 12px; font-size: 0.8rem; } .tab-btn span { display: none; } .data-toolbar { padding: 8px; } .toolbar-info { display: none; } .modal { width: 95%; } .output-table { font-size: 0.75rem; } .output-table th, .output-table td { padding: 6px; } .analysis-config { grid-template-columns: 1fr; } }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
     <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv,.db,.sqlite,.sqlite3" onchange="handleFileImport(event)">
@@ -236,6 +237,8 @@
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-header">No Paramétricos</div>
                     <div class="dropdown-item" onclick="showChiSquareDialog()"><i class="fas fa-check-square"></i> Chi-Cuadrado</div>
+                    <div class="dropdown-item" onclick="showMannWhitneyDialog()"><i class="fas fa-not-equal"></i> Mann-Whitney U</div>
+                    <div class="dropdown-item" onclick="showKruskalWallisDialog()"><i class="fas fa-layer-group"></i> Kruskal-Wallis H</div>
                 </div>
             </div>
             <div class="menu-item"><i class="fas fa-paint-brush"></i> Gráficos
@@ -258,6 +261,7 @@
         </nav>
         <div class="header-actions">
             <span class="dataset-badge" id="datasetBadge">Sin datos</span>
+            <button class="header-btn" onclick="showAdvisorDialog()" title="Advisor" style="background:linear-gradient(135deg,#27ae60,#2ecc71);"><i class="fas fa-magic"></i><span>Advisor</span></button>
             <button class="header-btn" onclick="showDatasetsDialog()" title="Datasets"><i class="fas fa-database"></i><span>Datasets</span></button>
             <button class="header-btn" onclick="showHelpDialog()" title="Ayuda"><i class="fas fa-question-circle"></i></button>
         </div>
@@ -274,6 +278,7 @@
                     <button class="sidebar-btn" onclick="showCorrelationDialog()"><i class="fas fa-project-diagram"></i> Correlaciones</button>
                     <button class="sidebar-btn" onclick="showRegressionDialog()"><i class="fas fa-chart-line"></i> Regresión Lineal</button>
                     <button class="sidebar-btn" onclick="showLogisticRegressionDialog()"><i class="fas fa-wave-square"></i> Regresión Logística</button>
+                    <button class="sidebar-btn" onclick="showAdvisorDialog()" style="background:linear-gradient(135deg,#27ae60,#2ecc71);color:white;margin-top:8px;"><i class="fas fa-magic"></i> StatView Advisor</button>
                 </div>
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">Variables del Dataset</div>
@@ -678,6 +683,10 @@
                             <tr><td style="font-weight: 600;"><i class="fas fa-calculator" style="color: var(--secondary); margin-right: 6px;"></i>Transformaciones</td><td>Logaritmo natural, logaritmo base 10, raíz cuadrada, cuadrado, recíproco, Z-score (estandarizar), valor absoluto, fórmula personalizada</td></tr>
                             <tr><td style="font-weight: 600;"><i class="fas fa-layer-group" style="color: var(--secondary); margin-right: 6px;"></i>Datasets múltiples</td><td>Gestión de múltiples datasets simultáneos con conmutación rápida</td></tr>
                             <tr><td style="font-weight: 600;"><i class="fas fa-mobile-alt" style="color: var(--secondary); margin-right: 6px;"></i>Responsive</td><td>Diseño adaptativo completo para móvil, tablet y escritorio con menú hamburguesa</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-not-equal" style="color: var(--secondary); margin-right: 6px;"></i>Mann-Whitney U</td><td>Prueba no paramétrica para comparar 2 grupos independientes. Incluye p-value exacto (Monte Carlo), r de efecto, correlación rank-biserial y descriptivos por grupo</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-layer-group" style="color: var(--secondary); margin-right: 6px;"></i>Kruskal-Wallis H</td><td>Prueba no paramétrica para comparar 3+ grupos independientes. Incluye corrección por ties, eta-cuadrado, post-hoc Dunn con corrección Bonferroni y descriptivos por grupo</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-wave-square" style="color: var(--secondary); margin-right: 6px;"></i>Regresión Logística Binaria</td><td>IRLS (Iteratively Reweighted Least Squares) con estandarización. McFadden R², Nagelkerke R², AIC/BIC, Odds Ratios con IC 95%, tabla de clasificación, prueba de Hosmer-Lemeshow</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-magic" style="color: var(--secondary); margin-right: 6px;"></i>StatView Advisor</td><td>Asistente interactivo de 4 pasos que guía la selección de la prueba estadística apropiada según tipo de variables, grupos, supuestos y objetivo. Incluye condiciones, supuestos y alternativas</td></tr>
                             <tr><td style="font-weight: 600;"><i class="fas fa-keyboard" style="color: var(--secondary); margin-right: 6px;"></i>Atajos de teclado</td><td>Ctrl+O (importar), Ctrl+S (exportar Excel), Ctrl+R (ejecutar sintaxis), Ctrl+1–5 (cambiar pestañas)</td></tr>
                         </tbody>
                     </table>
@@ -696,7 +705,131 @@
         </div>
     </div>
 
-    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Mann-Whitney U Modal -->
+    <div class="modal-overlay" id="mannWhitneyModal">
+        <div class="modal">
+            <div class="modal-header" style="background:linear-gradient(135deg,#8e44ad,#9b59b6);"><span class="modal-title"><i class="fas fa-not-equal"></i> Prueba U de Mann-Whitney</span><button class="modal-close" onclick="closeModal('mannWhitneyModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable de Prueba (continua/ordinal):</label><select class="form-select" id="mwVariable"></select></div>
+                <div class="form-group"><label class="form-label">Variable de Agrupación (2 grupos):</label><select class="form-select" id="mwGroupVariable"></select><p class="form-hint">Debe tener exactamente 2 categorías distintas</p></div>
+                <div class="form-group"><label class="form-label">Hipótesis alternativa:</label><select class="form-select" id="mwAlternative"><option value="two-sided" selected>Bilateral (dos colas)</option><option value="greater">Unilateral: Grupo 1 > Grupo 2</option><option value="less">Unilateral: Grupo 1 < Grupo 2</option></select></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="mwAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option><option value="0.001">0.001</option></select></div>
+                <div class="form-group"><label class="var-checkbox"><input type="checkbox" id="mwExact" checked> Calcular p-value exacto (simulación Monte Carlo si N > 20)</label></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('mannWhitneyModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runMannWhitney()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kruskal-Wallis H Modal -->
+    <div class="modal-overlay" id="kruskalWallisModal">
+        <div class="modal">
+            <div class="modal-header" style="background:linear-gradient(135deg,#16a085,#1abc9c);"><span class="modal-title"><i class="fas fa-layer-group"></i> Prueba H de Kruskal-Wallis</span><button class="modal-close" onclick="closeModal('kruskalWallisModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Variable de Prueba (continua/ordinal):</label><select class="form-select" id="kwVariable"></select></div>
+                <div class="form-group"><label class="form-label">Variable de Factor (≥3 grupos recomendado):</label><select class="form-select" id="kwFactorVariable"></select></div>
+                <div class="form-group"><label class="form-label">Nivel de Significancia (α):</label><select class="form-select" id="kwAlpha"><option value="0.05" selected>0.05</option><option value="0.01">0.01</option></select></div>
+                <div class="form-group"><label class="var-checkbox"><input type="checkbox" id="kwPostHoc" checked> Comparaciones post-hoc (Dunn) si significativo</label></div>
+                <div class="form-group"><label class="var-checkbox"><input type="checkbox" id="kwDescriptives" checked> Mostrar estadísticos descriptivos por grupo</label></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('kruskalWallisModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="runKruskalWallis()"><i class="fas fa-play"></i> Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advisor Modal -->
+    <div class="modal-overlay" id="advisorModal">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#27ae60,#2ecc71);"><span class="modal-title"><i class="fas fa-magic"></i> StatView Advisor — Selección de Prueba Estadística</span><button class="modal-close" onclick="closeModal('advisorModal')">&times;</button></div>
+            <div class="modal-body">
+                <div style="background:#f0f9f4;border-radius:8px;padding:14px;margin-bottom:16px;border-left:4px solid #27ae60;">
+                    <p style="font-size:0.9rem;color:#1e8449;margin:0;line-height:1.6;"><i class="fas fa-lightbulb" style="margin-right:6px;"></i>Responde las preguntas siguientes y el Advisor recomendará la prueba estadística más apropiada para tu análisis.</p>
+                </div>
+                <div id="advisorStep1">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:1rem;color:var(--primary);"><b>Paso 1 de 4:</b> ¿Cuál es tu objetivo de análisis?</label>
+                        <div class="dataset-grid" style="grid-template-columns:1fr 1fr;">
+                            <div class="dataset-card" onclick="advisorSelect('objective','compare_means')">
+                                <i class="fas fa-balance-scale" style="color:#2980b9;"></i>
+                                <div class="dataset-card-name">Comparar medias/grupos</div>
+                                <div class="dataset-card-info">¿Existen diferencias entre grupos?</div>
+                            </div>
+                            <div class="dataset-card" onclick="advisorSelect('objective','associations')">
+                                <i class="fas fa-project-diagram" style="color:#e74c3c;"></i>
+                                <div class="dataset-card-name">Asociaciones / Relaciones</div>
+                                <div class="dataset-card-info">¿Variables relacionadas entre sí?</div>
+                            </div>
+                            <div class="dataset-card" onclick="advisorSelect('objective','predict')">
+                                <i class="fas fa-chart-line" style="color:#27ae60;"></i>
+                                <div class="dataset-card-name">Predecir / Modelar</div>
+                                <div class="dataset-card-info">¿Predecir una variable desde otras?</div>
+                            </div>
+                            <div class="dataset-card" onclick="advisorSelect('objective','describe')">
+                                <i class="fas fa-list-ol" style="color:#f39c12;"></i>
+                                <div class="dataset-card-name">Describir / Resumir</div>
+                                <div class="dataset-card-info">Características de una variable</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="advisorStep2" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:1rem;color:var(--primary);"><b>Paso 2 de 4:</b> <span id="advisorQ2Text"></span></label>
+                        <div id="advisorQ2Options" class="dataset-grid"></div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="advisorBack(1)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                </div>
+                <div id="advisorStep3" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:1rem;color:var(--primary);"><b>Paso 3 de 4:</b> <span id="advisorQ3Text"></span></label>
+                        <div id="advisorQ3Options" class="dataset-grid"></div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="advisorBack(2)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                </div>
+                <div id="advisorStep4" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:1rem;color:var(--primary);"><b>Paso 4 de 4:</b> <span id="advisorQ4Text"></span></label>
+                        <div id="advisorQ4Options" class="dataset-grid"></div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="advisorBack(3)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                </div>
+                <div id="advisorResult" style="display:none;">
+                    <div style="background:linear-gradient(135deg,#27ae60,#2ecc71);color:white;border-radius:10px;padding:20px;text-align:center;margin-bottom:16px;">
+                        <i class="fas fa-check-circle" style="font-size:3rem;margin-bottom:10px;"></i>
+                        <h3 style="margin:0 0 8px 0;">Prueba Recomendada</h3>
+                        <div id="advisorRecName" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;"></div>
+                        <div id="advisorRecDesc" style="font-size:0.95rem;opacity:0.95;"></div>
+                    </div>
+                    <div style="background:var(--bg-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <h4 style="color:var(--primary);margin:0 0 10px 0;font-size:1rem;"><i class="fas fa-clipboard-check"></i> Condiciones Verificadas</h4>
+                        <ul id="advisorRecConditions" style="margin:0;padding-left:20px;font-size:0.9rem;line-height:1.8;color:var(--text-dark);"></ul>
+                    </div>
+                    <div style="background:var(--bg-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <h4 style="color:var(--primary);margin:0 0 10px 0;font-size:1rem;"><i class="fas fa-exclamation-triangle"></i> Supuestos</h4>
+                        <ul id="advisorRecAssumptions" style="margin:0;padding-left:20px;font-size:0.9rem;line-height:1.8;color:var(--text-dark);"></ul>
+                    </div>
+                    <div id="advisorRecAlternative" style="background:#fff3e0;border-radius:8px;padding:14px;margin-bottom:16px;border-left:4px solid #f39c12;">
+                        <h4 style="color:#e67e22;margin:0 0 8px 0;font-size:0.95rem;"><i class="fas fa-random"></i> Alternativa si no se cumplen supuestos</h4>
+                        <p id="advisorRecAltText" style="margin:0;font-size:0.9rem;color:var(--text-dark);"></p>
+                    </div>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                        <button class="btn btn-primary" id="advisorRunBtn" onclick="advisorRunTest()"><i class="fas fa-play"></i> Ejecutar Prueba</button>
+                        <button class="btn btn-secondary" onclick="advisorReset()"><i class="fas fa-redo"></i> Reiniciar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="advisorFooter">
+                <button class="btn btn-secondary" onclick="closeModal('advisorModal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+<div class="toast-container" id="toastContainer"></div>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
         <div class="loading-text">Procesando...</div>
@@ -1538,6 +1671,14 @@ function populateVarSelectors() {
     document.getElementById('logDV').innerHTML = makeOptions(allVars);
     document.getElementById('logIVSelector').innerHTML = makeCheckboxes(numericVars, 'log');
 
+    // Mann-Whitney U
+    document.getElementById('mwVariable').innerHTML = makeOptions(numericVars.length > 0 ? numericVars : allVars);
+    document.getElementById('mwGroupVariable').innerHTML = makeOptions(groupVars.length > 0 ? groupVars : allVars);
+
+    // Kruskal-Wallis H
+    document.getElementById('kwVariable').innerHTML = makeOptions(numericVars.length > 0 ? numericVars : allVars);
+    document.getElementById('kwFactorVariable').innerHTML = makeOptions(groupVars.length > 0 ? groupVars : allVars);
+
     // Charts
     document.getElementById('chartVarX').innerHTML = makeOptions(allVars);
     document.getElementById('chartVarY').innerHTML = '<option value="">-- Ninguna --</option>' + makeOptions(numericVars);
@@ -1562,9 +1703,517 @@ function showFrequenciesDialog() { populateVarSelectors(); showModal('frequencie
 function showCrosstabsDialog() { populateVarSelectors(); showModal('crosstabsModal'); }
 function showTransformDialog() { populateVarSelectors(); showModal('transformModal'); }
 function showLogisticRegressionDialog() { populateVarSelectors(); showModal('logisticModal'); }
+function showMannWhitneyDialog() { populateVarSelectors(); showModal('mannWhitneyModal'); }
+function showKruskalWallisDialog() { populateVarSelectors(); showModal('kruskalWallisModal'); }
+function showAdvisorDialog() { showModal('advisorModal'); advisorReset(); }
 function showNewDatasetDialog() { const name = prompt('Nombre del nuevo dataset:'); if (name) createDataset(name); }
 function showImportSQLDialog() { document.getElementById('fileInput').accept = '.db,.sqlite,.sqlite3'; document.getElementById('fileInput').click(); document.getElementById('fileInput').accept = '.xlsx,.xls,.csv,.db,.sqlite,.sqlite3'; }
 function showHelpDialog() { showModal('helpModal'); }
+function showAboutDialog() { showModal('aboutModal'); }
+
+// ==================== ADVISOR / ASISTENTE DE PRUEBAS ====================
+const AdvisorState = {
+    step: 1,
+    answers: {},
+    recommendation: null
+};
+
+function advisorReset() {
+    AdvisorState.step = 1;
+    AdvisorState.answers = {};
+    AdvisorState.recommendation = null;
+    document.getElementById('advisorStep1').style.display = 'block';
+    document.getElementById('advisorStep2').style.display = 'none';
+    document.getElementById('advisorStep3').style.display = 'none';
+    document.getElementById('advisorStep4').style.display = 'none';
+    document.getElementById('advisorResult').style.display = 'none';
+    document.getElementById('advisorFooter').style.display = 'flex';
+}
+
+function advisorSelect(question, value) {
+    AdvisorState.answers[question] = value;
+
+    if (question === 'objective') {
+        if (value === 'compare_means') {
+            document.getElementById('advisorStep1').style.display = 'none';
+            document.getElementById('advisorStep2').style.display = 'block';
+            document.getElementById('advisorQ2Text').textContent = '¿Cuántos grupos quieres comparar?';
+            document.getElementById('advisorQ2Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('n_groups','1')">
+                    <i class="fas fa-user" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">1 grupo</div>
+                    <div class="dataset-card-info">Comparar contra un valor teórico</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('n_groups','2')">
+                    <i class="fas fa-user-friends" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">2 grupos</div>
+                    <div class="dataset-card-info">Dos grupos independientes o pareados</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('n_groups','3plus')">
+                    <i class="fas fa-users" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">3 o más grupos</div>
+                    <div class="dataset-card-info">Múltiples grupos independientes</div>
+                </div>
+            `;
+        } else if (value === 'associations') {
+            document.getElementById('advisorStep1').style.display = 'none';
+            document.getElementById('advisorStep2').style.display = 'block';
+            document.getElementById('advisorQ2Text').textContent = '¿Qué tipo de variables quieres relacionar?';
+            document.getElementById('advisorQ2Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('var_types','2_numeric')">
+                    <i class="fas fa-hashtag" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">Dos variables numéricas</div>
+                    <div class="dataset-card-info">Ej: altura y peso, edad y salario</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('var_types','2_categorical')">
+                    <i class="fas fa-font" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">Dos variables categóricas</div>
+                    <div class="dataset-card-info">Ej: género y preferencia, grupo y respuesta</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('var_types','numeric_categorical')">
+                    <i class="fas fa-exchange-alt" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Una numérica y una categórica</div>
+                    <div class="dataset-card-info">Esto es comparación de grupos, no asociación</div>
+                </div>
+            `;
+        } else if (value === 'predict') {
+            document.getElementById('advisorStep1').style.display = 'none';
+            document.getElementById('advisorStep2').style.display = 'block';
+            document.getElementById('advisorQ2Text').textContent = '¿Cuál es el tipo de tu variable dependiente?';
+            document.getElementById('advisorQ2Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('dv_type','continuous')">
+                    <i class="fas fa-chart-line" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">Continua (numérica)</div>
+                    <div class="dataset-card-info">Ej: precio, temperatura, puntuación</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('dv_type','binary')">
+                    <i class="fas fa-toggle-on" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">Binaria (sí/no, 0/1)</div>
+                    <div class="dataset-card-info">Ej: éxito/fracaso, enfermo/sano</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('dv_type','categorical')">
+                    <i class="fas fa-list" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Categórica (3+ categorías)</div>
+                    <div class="dataset-card-info">Ej: tipo de cliente, nivel educativo</div>
+                </div>
+            `;
+        } else if (value === 'describe') {
+            advisorShowResult('descriptives');
+        }
+    }
+
+    else if (question === 'n_groups') {
+        if (value === '1') {
+            document.getElementById('advisorStep2').style.display = 'none';
+            document.getElementById('advisorStep3').style.display = 'block';
+            document.getElementById('advisorQ3Text').textContent = '¿Tu variable es numérica y conoces la desviación poblacional?';
+            document.getElementById('advisorQ3Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('known_sigma','yes')">
+                    <i class="fas fa-check" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Sí, conozco σ</div>
+                    <div class="dataset-card-info">Raro en la práctica; usa Z-test</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('known_sigma','no')">
+                    <i class="fas fa-times" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">No, desconozco σ</div>
+                    <div class="dataset-card-info">Lo más común; usa T-test</div>
+                </div>
+            `;
+        } else if (value === '2') {
+            document.getElementById('advisorStep2').style.display = 'none';
+            document.getElementById('advisorStep3').style.display = 'block';
+            document.getElementById('advisorQ3Text').textContent = '¿Los grupos son independientes o son mediciones pareadas?';
+            document.getElementById('advisorQ3Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('paired','independent')">
+                    <i class="fas fa-users" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">Independientes</div>
+                    <div class="dataset-card-info">Dos muestras diferentes (ej: hombres vs mujeres)</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('paired','paired')">
+                    <i class="fas fa-link" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">Pareadas / Relacionadas</div>
+                    <div class="dataset-card-info">Misma muestra medida dos veces (ej: antes/después)</div>
+                </div>
+            `;
+        } else if (value === '3plus') {
+            document.getElementById('advisorStep2').style.display = 'none';
+            document.getElementById('advisorStep3').style.display = 'block';
+            document.getElementById('advisorQ3Text').textContent = '¿Tu variable dependiente es numérica y se distribuye normalmente?';
+            document.getElementById('advisorQ3Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('normality','yes')">
+                    <i class="fas fa-chart-area" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Sí, normal</div>
+                    <div class="dataset-card-info">ANOVA es apropiada</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality','no')">
+                    <i class="fas fa-wave-square" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">No, no normal / ordinal</div>
+                    <div class="dataset-card-info">Kruskal-Wallis es más robusta</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality','unknown')">
+                    <i class="fas fa-question" style="color:#f39c12;"></i>
+                    <div class="dataset-card-name">No estoy seguro</div>
+                    <div class="dataset-card-info">Recomendación conservadora</div>
+                </div>
+            `;
+        }
+    }
+
+    else if (question === 'known_sigma') {
+        if (value === 'yes') advisorShowResult('z_test_one_sample');
+        else advisorShowResult('t_test_one_sample');
+    }
+
+    else if (question === 'paired') {
+        if (value === 'independent') {
+            document.getElementById('advisorStep3').style.display = 'none';
+            document.getElementById('advisorStep4').style.display = 'block';
+            document.getElementById('advisorQ4Text').textContent = '¿La variable dependiente es numérica y se distribuye normalmente?';
+            document.getElementById('advisorQ4Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('normality_2ind','yes')">
+                    <i class="fas fa-chart-area" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Sí, normal</div>
+                    <div class="dataset-card-info">T-test independiente</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality_2ind','no')">
+                    <i class="fas fa-wave-square" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">No, no normal / ordinal</div>
+                    <div class="dataset-card-info">Mann-Whitney U (más robusta)</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality_2ind','unknown')">
+                    <i class="fas fa-question" style="color:#f39c12;"></i>
+                    <div class="dataset-card-name">No estoy seguro</div>
+                    <div class="dataset-card-info">Recomendación conservadora</div>
+                </div>
+            `;
+        } else {
+            document.getElementById('advisorStep3').style.display = 'none';
+            document.getElementById('advisorStep4').style.display = 'block';
+            document.getElementById('advisorQ4Text').textContent = '¿Las diferencias pareadas son normales?';
+            document.getElementById('advisorQ4Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('normality_paired','yes')">
+                    <i class="fas fa-chart-area" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Sí, normales</div>
+                    <div class="dataset-card-info">T-test pareado</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality_paired','no')">
+                    <i class="fas fa-wave-square" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">No, no normales</div>
+                    <div class="dataset-card-info">Wilcoxon signed-rank (no implementado; usa Mann-Whitney)</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality_paired','unknown')">
+                    <i class="fas fa-question" style="color:#f39c12;"></i>
+                    <div class="dataset-card-name">No estoy seguro</div>
+                    <div class="dataset-card-info">T-test pareado (robusto con n>30)</div>
+                </div>
+            `;
+        }
+    }
+
+    else if (question === 'normality' || question === 'normality_2ind') {
+        if (value === 'yes') advisorShowResult('anova');
+        else if (value === 'no') advisorShowResult('kruskal_wallis');
+        else advisorShowResult('kruskal_wallis_conservative');
+    }
+
+    else if (question === 'normality_paired') {
+        if (value === 'yes') advisorShowResult('t_test_paired');
+        else if (value === 'no') advisorShowResult('mann_whitney_paired');
+        else advisorShowResult('t_test_paired');
+    }
+
+    else if (question === 'var_types') {
+        if (value === '2_numeric') {
+            document.getElementById('advisorStep2').style.display = 'none';
+            document.getElementById('advisorStep3').style.display = 'block';
+            document.getElementById('advisorQ3Text').textContent = '¿Ambas variables son normales y la relación es lineal?';
+            document.getElementById('advisorQ3Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('correlation_type','pearson')">
+                    <i class="fas fa-chart-line" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Sí, normales y lineales</div>
+                    <div class="dataset-card-info">Correlación de Pearson</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('correlation_type','spearman')">
+                    <i class="fas fa-wave-square" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">No, o relación no lineal</div>
+                    <div class="dataset-card-info">Correlación de Spearman (no paramétrica)</div>
+                </div>
+            `;
+        } else if (value === '2_categorical') {
+            advisorShowResult('chi_square');
+        } else if (value === 'numeric_categorical') {
+            document.getElementById('advisorStep2').style.display = 'none';
+            document.getElementById('advisorStep3').style.display = 'block';
+            document.getElementById('advisorQ3Text').textContent = 'Esto es una comparación de grupos. ¿Cuántos grupos tiene la variable categórica?';
+            document.getElementById('advisorQ3Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('n_groups_assoc','2')">
+                    <i class="fas fa-user-friends" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">2 grupos</div>
+                    <div class="dataset-card-info">Ver comparación de 2 grupos</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('n_groups_assoc','3plus')">
+                    <i class="fas fa-users" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">3 o más grupos</div>
+                    <div class="dataset-card-info">Ver comparación de múltiples grupos</div>
+                </div>
+            `;
+        }
+    }
+
+    else if (question === 'correlation_type') {
+        if (value === 'pearson') advisorShowResult('pearson');
+        else advisorShowResult('spearman');
+    }
+
+    else if (question === 'n_groups_assoc') {
+        if (value === '2') {
+            AdvisorState.answers.n_groups = '2';
+            document.getElementById('advisorStep3').style.display = 'none';
+            document.getElementById('advisorStep4').style.display = 'block';
+            document.getElementById('advisorQ4Text').textContent = '¿Los grupos son independientes o pareados?';
+            document.getElementById('advisorQ4Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('paired','independent')">
+                    <i class="fas fa-users" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">Independientes</div>
+                    <div class="dataset-card-info">Dos muestras diferentes</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('paired','paired')">
+                    <i class="fas fa-link" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">Pareados</div>
+                    <div class="dataset-card-info">Misma muestra medida dos veces</div>
+                </div>
+            `;
+        } else {
+            AdvisorState.answers.n_groups = '3plus';
+            document.getElementById('advisorStep3').style.display = 'none';
+            document.getElementById('advisorStep4').style.display = 'block';
+            document.getElementById('advisorQ4Text').textContent = '¿Tu variable dependiente es numérica y se distribuye normalmente?';
+            document.getElementById('advisorQ4Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('normality','yes')">
+                    <i class="fas fa-chart-area" style="color:#27ae60;"></i>
+                    <div class="dataset-card-name">Sí, normal</div>
+                    <div class="dataset-card-info">ANOVA</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality','no')">
+                    <i class="fas fa-wave-square" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">No, no normal</div>
+                    <div class="dataset-card-info">Kruskal-Wallis</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('normality','unknown')">
+                    <i class="fas fa-question" style="color:#f39c12;"></i>
+                    <div class="dataset-card-name">No estoy seguro</div>
+                    <div class="dataset-card-info">Recomendación conservadora</div>
+                </div>
+            `;
+        }
+    }
+
+    else if (question === 'dv_type') {
+        if (value === 'continuous') {
+            document.getElementById('advisorStep2').style.display = 'none';
+            document.getElementById('advisorStep3').style.display = 'block';
+            document.getElementById('advisorQ3Text').textContent = '¿Cuántas variables independientes (predictoras) tienes?';
+            document.getElementById('advisorQ3Options').innerHTML = `
+                <div class="dataset-card" onclick="advisorSelect('n_ivs','1')">
+                    <i class="fas fa-hashtag" style="color:#2980b9;"></i>
+                    <div class="dataset-card-name">1 variable</div>
+                    <div class="dataset-card-info">Regresión lineal simple</div>
+                </div>
+                <div class="dataset-card" onclick="advisorSelect('n_ivs','2plus')">
+                    <i class="fas fa-hashtag" style="color:#e74c3c;"></i>
+                    <div class="dataset-card-name">2 o más variables</div>
+                    <div class="dataset-card-info">Regresión lineal múltiple</div>
+                </div>
+            `;
+        } else if (value === 'binary') {
+            advisorShowResult('logistic_regression');
+        } else if (value === 'categorical') {
+            advisorShowResult('multinomial_logistic');
+        }
+    }
+
+    else if (question === 'n_ivs') {
+        if (value === '1') advisorShowResult('regression_simple');
+        else advisorShowResult('regression_multiple');
+    }
+}
+
+function advisorBack(step) {
+    document.getElementById('advisorStep1').style.display = 'none';
+    document.getElementById('advisorStep2').style.display = 'none';
+    document.getElementById('advisorStep3').style.display = 'none';
+    document.getElementById('advisorStep4').style.display = 'none';
+    document.getElementById('advisorResult').style.display = 'none';
+    document.getElementById('advisorFooter').style.display = 'flex';
+    document.getElementById('advisorStep' + step).style.display = 'block';
+}
+
+const AdvisorRecommendations = {
+    descriptives: {
+        name: 'Estadísticos Descriptivos',
+        icon: 'fa-list-ol',
+        desc: 'Media, mediana, desviación estándar, percentiles, asimetría, curtosis.',
+        conditions: ['Variable de interés identificada', 'Tipo de variable conocido (numérica, ordinal, nominal)'],
+        assumptions: ['Ninguna prueba inferencial requerida', 'Valores faltantes deben ser manejados apropiadamente'],
+        alternative: 'Frecuencias para variables categóricas; tablas de contingencia para dos categóricas.',
+        action: () => { closeModal('advisorModal'); showDescriptivesDialog(); }
+    },
+    t_test_one_sample: {
+        name: 'T-Test de una muestra',
+        icon: 'fa-balance-scale',
+        desc: 'Compara la media de una muestra contra un valor teórico conocido.',
+        conditions: ['1 variable numérica continua', '1 valor de referencia (μ₀) conocido'],
+        assumptions: ['La variable se distribuye aproximadamente normal (o n > 30)', 'Observaciones independientes', 'Escala de intervalo o razón'],
+        alternative: 'Si no se cumple normalidad y n < 30: prueba de signos (no paramétrica).',
+        action: () => { closeModal('advisorModal'); document.getElementById('ttestType').value = 'one-sample'; updateTTestUI(); showModal('ttestModal'); }
+    },
+    z_test_one_sample: {
+        name: 'Z-Test de una muestra',
+        icon: 'fa-balance-scale',
+        desc: 'Compara la media de una muestra contra un valor teórico cuando σ es conocida.',
+        conditions: ['1 variable numérica continua', 'Desviación estándar poblacional (σ) conocida'],
+        assumptions: ['Distribución normal de la población', 'σ conocida (raro en la práctica)', 'Muestra grande preferible'],
+        alternative: 'T-Test de una muestra (cuando σ es desconocida, que es lo habitual).',
+        action: () => { closeModal('advisorModal'); document.getElementById('ttestType').value = 'one-sample'; updateTTestUI(); showModal('ttestModal'); showToast('Nota: El Z-test usa la misma interfaz que T-test. Introduce σ como desv. estándar.', 'warning'); }
+    },
+    t_test_paired: {
+        name: 'T-Test pareado',
+        icon: 'fa-link',
+        desc: 'Compara dos mediciones de la misma muestra (antes/después).',
+        conditions: ['2 variables numéricas medidas en los mismos sujetos', 'Diferencias pareadas calculables'],
+        assumptions: ['Las diferencias se distribuyen normalmente (o n > 30)', 'Pares de observaciones relacionadas', 'Escala de intervalo o razón'],
+        alternative: 'Si las diferencias no son normales: prueba de Wilcoxon signed-rank (no implementada; usa Mann-Whitney como aproximación).',
+        action: () => { closeModal('advisorModal'); document.getElementById('ttestType').value = 'paired'; updateTTestUI(); showModal('ttestModal'); }
+    },
+    anova: {
+        name: 'ANOVA Unidireccional',
+        icon: 'fa-layer-group',
+        desc: 'Compara medias de 3 o más grupos independientes.',
+        conditions: ['1 variable dependiente numérica continua', '1 variable factor con 3+ grupos independientes'],
+        assumptions: ['Normalidad en cada grupo (o muestras grandes)', 'Homogeneidad de varianzas (homocedasticidad)', 'Observaciones independientes entre grupos', 'Escala de intervalo o razón'],
+        alternative: 'Si no se cumple normalidad o homocedasticidad: Kruskal-Wallis H.',
+        action: () => { closeModal('advisorModal'); showANOVADialog(); }
+    },
+    kruskal_wallis: {
+        name: 'Prueba H de Kruskal-Wallis',
+        icon: 'fa-layer-group',
+        desc: 'Compara distribuciones de 3+ grupos independientes (no paramétrica).',
+        conditions: ['1 variable dependiente ordinal o numérica no normal', '1 variable factor con 3+ grupos independientes'],
+        assumptions: ['Observaciones independientes entre grupos', 'La variable dependiente al menos ordinal', 'Distribuciones de forma similar (escala de intervalo)'],
+        alternative: 'Si las distribuciones tienen formas muy diferentes: considera transformación de datos o modelos robustos.',
+        action: () => { closeModal('advisorModal'); showKruskalWallisDialog(); }
+    },
+    kruskal_wallis_conservative: {
+        name: 'Prueba H de Kruskal-Wallis (recomendación conservadora)',
+        icon: 'fa-layer-group',
+        desc: 'No estás seguro de la normalidad. Kruskal-Wallis es robusta y no requiere supuestos paramétricos.',
+        conditions: ['1 variable dependiente numérica', '1 variable factor con 3+ grupos', 'Incertidumbre sobre normalidad'],
+        assumptions: ['Observaciones independientes', 'Variable al menos ordinal'],
+        alternative: 'Si confirmas normalidad y homocedasticidad posteriormente, puedes usar ANOVA.',
+        action: () => { closeModal('advisorModal'); showKruskalWallisDialog(); }
+    },
+    mann_whitney_paired: {
+        name: 'Mann-Whitney U (aproximación para pareados)',
+        icon: 'fa-not-equal',
+        desc: 'Compara dos muestras relacionadas cuando las diferencias no son normales.',
+        conditions: ['2 mediciones pareadas no normales', 'Variable al menos ordinal'],
+        assumptions: ['Observaciones pareadas', 'Variable al menos ordinal', 'Independencia entre pares'],
+        alternative: 'La prueba exacta para datos pareados es Wilcoxon signed-rank (aún no implementada).',
+        action: () => { closeModal('advisorModal'); showMannWhitneyDialog(); showToast('Nota: Para datos pareados, la prueba exacta es Wilcoxon signed-rank. Mann-Whitney es una aproximación.', 'warning'); }
+    },
+    pearson: {
+        name: 'Correlación de Pearson',
+        icon: 'fa-project-diagram',
+        desc: 'Mide la relación lineal entre dos variables numéricas continuas.',
+        conditions: ['2 variables numéricas continuas', 'Relación aproximadamente lineal'],
+        assumptions: ['Ambas variables se distribuyen normalmente (o muestras grandes)', 'Relación lineal entre variables', 'Homocedasticidad (varianza constante)', 'Sin valores atípicos extremos'],
+        alternative: 'Si no se cumple normalidad o linealidad: correlación de Spearman.',
+        action: () => { closeModal('advisorModal'); document.getElementById('corrType').value = 'pearson'; showCorrelationDialog(); }
+    },
+    spearman: {
+        name: 'Correlación de Spearman',
+        icon: 'fa-project-diagram',
+        desc: 'Mide la relación monotónica entre dos variables (no paramétrica).',
+        conditions: ['2 variables al menos ordinales', 'Relación no necesariamente lineal'],
+        assumptions: ['Variables al menos ordinales', 'Relación monotónica', 'Independencia de observaciones'],
+        alternative: 'Si la relación es no monotónica: considera correlación de Kendall tau o transformación de variables.',
+        action: () => { closeModal('advisorModal'); document.getElementById('corrType').value = 'spearman'; showCorrelationDialog(); }
+    },
+    chi_square: {
+        name: 'Prueba de Chi-Cuadrado',
+        icon: 'fa-check-square',
+        desc: 'Prueba independencia/asociación entre dos variables categóricas.',
+        conditions: ['2 variables categóricas (nominales u ordinales)', 'Tabla de contingencia'],
+        assumptions: ['Frecuencias esperadas ≥ 5 en al menos el 80% de las celdas', 'N total ≥ 20', 'Observaciones independientes'],
+        alternative: 'Si frecuencias esperadas < 5: prueba exacta de Fisher (no implementada) o agrupar categorías.',
+        action: () => { closeModal('advisorModal'); showChiSquareDialog(); }
+    },
+    regression_simple: {
+        name: 'Regresión Lineal Simple',
+        icon: 'fa-chart-line',
+        desc: 'Predice una variable continua desde una única variable predictora.',
+        conditions: ['1 variable dependiente numérica continua', '1 variable independiente numérica'],
+        assumptions: ['Linealidad entre X e Y', 'Normalidad de residuos', 'Homocedasticidad', 'Independencia de residuos', 'Sin multicolinealidad (solo 1 predictor)'],
+        alternative: 'Si no hay linealidad: transformación de variables o regresión no lineal.',
+        action: () => { closeModal('advisorModal'); showRegressionDialog(); }
+    },
+    regression_multiple: {
+        name: 'Regresión Lineal Múltiple',
+        icon: 'fa-chart-line',
+        desc: 'Predice una variable continua desde múltiples variables predictoras.',
+        conditions: ['1 variable dependiente numérica continua', '2+ variables independientes numéricas'],
+        assumptions: ['Linealidad entre predictores y respuesta', 'Normalidad de residuos', 'Homocedasticidad', 'Independencia de residuos', 'No multicolinealidad severa (VIF < 10)'],
+        alternative: 'Si hay multicolinealidad: eliminar predictores correlacionados o usar Ridge/Lasso.',
+        action: () => { closeModal('advisorModal'); showRegressionDialog(); }
+    },
+    logistic_regression: {
+        name: 'Regresión Logística Binaria',
+        icon: 'fa-wave-square',
+        desc: 'Predice una variable dependiente binaria (sí/no) desde predictoras.',
+        conditions: ['1 variable dependiente binaria (0/1, Sí/No)', '1+ variables independientes (numéricas o categóricas)'],
+        assumptions: ['Independencia de observaciones', 'Linealidad entre predictores y log-odds', 'No multicolinealidad severa', 'Tamaño de muestra adecuado (mínimo 10 eventos por predictor)'],
+        alternative: 'Si la variable dependiente tiene 3+ categorías: regresión logística multinomial.',
+        action: () => { closeModal('advisorModal'); showLogisticRegressionDialog(); }
+    },
+    multinomial_logistic: {
+        name: 'Regresión Logística Multinomial',
+        icon: 'fa-list',
+        desc: 'Predice una variable categórica con 3+ niveles.',
+        conditions: ['1 variable dependiente categórica con 3+ niveles', 'Predictoras numéricas o categóricas'],
+        assumptions: ['Independencia de observaciones', 'Independencia de alternativas irrelevantes (IIA)', 'No multicolinealidad'],
+        alternative: 'Aún no implementada en StatView Pro. Considera agrupar categorías o usar regresión logística binaria por pares.',
+        action: () => { closeModal('advisorModal'); showToast('Regresión logística multinomial aún no implementada. Considera agrupar categorías.', 'warning'); }
+    }
+};
+
+function advisorShowResult(recKey) {
+    AdvisorState.recommendation = recKey;
+    const rec = AdvisorRecommendations[recKey];
+    if (!rec) return;
+
+    document.getElementById('advisorStep1').style.display = 'none';
+    document.getElementById('advisorStep2').style.display = 'none';
+    document.getElementById('advisorStep3').style.display = 'none';
+    document.getElementById('advisorStep4').style.display = 'none';
+    document.getElementById('advisorResult').style.display = 'block';
+    document.getElementById('advisorFooter').style.display = 'none';
+
+    document.getElementById('advisorRecName').innerHTML = `<i class="fas ${rec.icon}"></i> ${rec.name}`;
+    document.getElementById('advisorRecDesc').textContent = rec.desc;
+    document.getElementById('advisorRecConditions').innerHTML = rec.conditions.map(c => `<li><i class="fas fa-check-circle" style="color:#27ae60;margin-right:6px;"></i>${c}</li>`).join('');
+    document.getElementById('advisorRecAssumptions').innerHTML = rec.assumptions.map(a => `<li><i class="fas fa-exclamation-circle" style="color:#f39c12;margin-right:6px;"></i>${a}</li>`).join('');
+    document.getElementById('advisorRecAltText').textContent = rec.alternative;
+
+    const btn = document.getElementById('advisorRunBtn');
+    btn.onclick = () => { rec.action(); };
+}
+
+function advisorRunTest() {
+    if (AdvisorState.recommendation && AdvisorRecommendations[AdvisorState.recommendation]) {
+        AdvisorRecommendations[AdvisorState.recommendation].action();
+    }
+}
+
 function showAboutDialog() { showModal('aboutModal'); }
 
 function showDatasetsDialog() {
@@ -2522,6 +3171,414 @@ function runLogisticRegression() {
         switchTab('output');
         showToast(`Regresión logística completada (${iterations} iteraciones)`, 'success');
         addToSyntax(`LOGISTIC REGRESSION ${dvName} WITH ${selectedIVs.join(' ')}`);
+    }, 100);
+}
+
+// ==================== MANN-WHITNEY U TEST ====================
+function runMannWhitney() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const varName = document.getElementById('mwVariable').value;
+    const groupVar = document.getElementById('mwGroupVariable').value;
+    const alternative = document.getElementById('mwAlternative').value;
+    const alpha = parseFloat(document.getElementById('mwAlpha').value);
+    const exact = document.getElementById('mwExact').checked;
+
+    closeModal('mannWhitneyModal');
+    showLoading('Calculando Mann-Whitney U...');
+
+    setTimeout(() => {
+        const groups = getGroupedValues(varName, groupVar);
+        const groupNames = Object.keys(groups);
+
+        if (groupNames.length !== 2) {
+            hideLoading();
+            showToast(`La variable de agrupación debe tener exactamente 2 grupos (tiene ${groupNames.length})`, 'error');
+            return;
+        }
+
+        const g1 = groups[groupNames[0]];
+        const g2 = groups[groupNames[1]];
+        const n1 = g1.length, n2 = g2.length;
+        const N = n1 + n2;
+
+        // Combine and rank all values
+        const combined = [];
+        g1.forEach(v => combined.push({ val: v, group: 0 }));
+        g2.forEach(v => combined.push({ val: v, group: 1 }));
+        combined.sort((a, b) => a.val - b.val);
+
+        // Assign ranks (handle ties with average rank)
+        const ranks = new Array(combined.length);
+        let i = 0;
+        while (i < combined.length) {
+            let j = i;
+            while (j < combined.length && combined[j].val === combined[i].val) j++;
+            const avgRank = (i + 1 + j) / 2;
+            for (let k = i; k < j; k++) ranks[k] = avgRank;
+            i = j;
+        }
+
+        // Sum of ranks for each group
+        let R1 = 0, R2 = 0;
+        for (let i = 0; i < combined.length; i++) {
+            if (combined[i].group === 0) R1 += ranks[i];
+            else R2 += ranks[i];
+        }
+
+        // U statistics
+        const U1 = n1 * n2 + (n1 * (n1 + 1)) / 2 - R1;
+        const U2 = n1 * n2 + (n2 * (n2 + 1)) / 2 - R2;
+        const U = Math.min(U1, U2);
+        const Umax = Math.max(U1, U2);
+
+        // Normal approximation
+        const meanU = (n1 * n2) / 2;
+
+        // Tie correction
+        let tieSum = 0;
+        i = 0;
+        while (i < combined.length) {
+            let j = i;
+            while (j < combined.length && combined[j].val === combined[i].val) j++;
+            const t = j - i;
+            if (t > 1) tieSum += t * t * t - t;
+            i = j;
+        }
+        const tieCorrection = 1 - tieSum / (N * N * N - N);
+        const sigmaU = Math.sqrt((n1 * n2 * (N + 1)) / 12 * tieCorrection);
+
+        // Z-score with continuity correction
+        let z;
+        if (U > meanU) z = (U - 0.5 - meanU) / sigmaU;
+        else z = (U + 0.5 - meanU) / sigmaU;
+
+        // Two-tailed p-value from normal approximation
+        let pValueApprox = 2 * (1 - normalCDF(Math.abs(z)));
+
+        // Exact p-value via simulation (Monte Carlo) for larger samples or when requested
+        let pValueExact = null;
+        if (exact && N <= 20) {
+            pValueExact = mannWhitneyExactP(g1, g2, U1, alternative);
+        } else if (exact && N > 20) {
+            pValueExact = mannWhitneyMonteCarlo(g1, g2, U1, alternative, 10000);
+        }
+
+        // Effect size: r = Z / sqrt(N)
+        const effectSizeR = z / Math.sqrt(N);
+
+        // Rank-biserial correlation (effect size)
+        const rankBiserial = 1 - (2 * U) / (n1 * n2);
+
+        // Median and IQR for each group
+        const med1 = median(g1), med2 = median(g2);
+        const q1_1 = percentile(g1, 25), q3_1 = percentile(g1, 75);
+        const q1_2 = percentile(g2, 25), q3_2 = percentile(g2, 75);
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-not-equal"></i> Prueba U de Mann-Whitney (${escapeHtml(varName)} por ${escapeHtml(groupVar)})</div></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Rangos</div>`;
+        html += `<table class="output-table"><thead><tr><th>Grupo</th><th>N</th><th>Suma de Rangos</th><th>Rango Medio</th></tr></thead><tbody>`;
+        html += `<tr><td style="font-weight:700">${escapeHtml(String(groupNames[0]))}</td><td>${n1}</td><td>${R1.toFixed(2)}</td><td>${(R1/n1).toFixed(4)}</td></tr>`;
+        html += `<tr><td style="font-weight:700">${escapeHtml(String(groupNames[1]))}</td><td>${n2}</td><td>${R2.toFixed(2)}</td><td>${(R2/n2).toFixed(4)}</td></tr>`;
+        html += `<tr style="font-weight:700"><td>Total</td><td>${N}</td><td>${(R1+R2).toFixed(2)}</td><td>${((R1+R2)/N).toFixed(4)}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Estadísticos de Prueba</div>`;
+        html += `<table class="output-table"><thead><tr><th></th><th>${escapeHtml(String(groupNames[0]))}</th><th>${escapeHtml(String(groupNames[1]))}</th></tr></thead><tbody>`;
+        html += `<tr><td style="font-weight:700">U de Mann-Whitney</td><td>${U1.toFixed(4)}</td><td>${U2.toFixed(4)}</td></tr>`;
+        html += `<tr><td style="font-weight:700">W de Wilcoxon</td><td>${R1.toFixed(4)}</td><td>${R2.toFixed(4)}</td></tr>`;
+        html += `</tbody></table>`;
+        html += `<table class="output-table" style="margin-top:12px;"><thead><tr><th>Z</th><th>Sig. Asintótica (bilateral)</th>${pValueExact !== null ? '<th>Sig. Exacta</th>' : ''}<th>U</th></tr></thead><tbody>`;
+        html += `<tr><td class="stat-value">${z.toFixed(4)}</td><td class="${pValueApprox < alpha ? 'p-sig' : 'p-ns'}">${pValueApprox.toFixed(4)}</td>`;
+        if (pValueExact !== null) html += `<td class="${pValueExact < alpha ? 'p-sig' : 'p-ns'}">${pValueExact.toFixed(4)}</td>`;
+        html += `<td class="stat-value">${U.toFixed(4)}</td></tr>`;
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: Las distribuciones de ambos grupos son idénticas | α = ${alpha}</p>`;
+        html += `</div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-ruler-combined"></i> Tamaño del Efecto</div>`;
+        html += `<table class="output-table"><thead><tr><th>Medida</th><th>Valor</th><th>Interpretación</th></tr></thead><tbody>`;
+        html += `<tr><td>r (Z / √N)</td><td class="stat-value">${Math.abs(effectSizeR).toFixed(4)}</td><td>${Math.abs(effectSizeR) < 0.1 ? 'Despreciable' : Math.abs(effectSizeR) < 0.3 ? 'Pequeño' : Math.abs(effectSizeR) < 0.5 ? 'Mediano' : 'Grande'}</td></tr>`;
+        html += `<tr><td>Correlación Rank-Biserial</td><td class="stat-value">${rankBiserial.toFixed(4)}</td><td>${Math.abs(rankBiserial) < 0.1 ? 'Despreciable' : Math.abs(rankBiserial) < 0.3 ? 'Pequeño' : Math.abs(rankBiserial) < 0.5 ? 'Mediano' : 'Grande'}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-chart-bar"></i> Estadísticos Descriptivos por Grupo</div>`;
+        html += `<table class="output-table"><thead><tr><th>Grupo</th><th>N</th><th>Mediana</th><th>Q1</th><th>Q3</th><th>IQR</th></tr></thead><tbody>`;
+        html += `<tr><td style="font-weight:700">${escapeHtml(String(groupNames[0]))}</td><td>${n1}</td><td>${med1.toFixed(4)}</td><td>${q1_1.toFixed(4)}</td><td>${q3_1.toFixed(4)}</td><td>${(q3_1-q1_1).toFixed(4)}</td></tr>`;
+        html += `<tr><td style="font-weight:700">${escapeHtml(String(groupNames[1]))}</td><td>${n2}</td><td>${med2.toFixed(4)}</td><td>${q1_2.toFixed(4)}</td><td>${q3_2.toFixed(4)}</td><td>${(q3_2-q1_2).toFixed(4)}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Mann-Whitney U completado', 'success');
+        addToSyntax(`NPAR TESTS /MANN-WHITNEY=${varName} BY ${groupVar}(${groupNames[0]} ${groupNames[1]})`);
+    }, 100);
+}
+
+// Normal CDF approximation
+function normalCDF(x) {
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+    const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    const sign = x < 0 ? -1 : 1;
+    x = Math.abs(x) / Math.sqrt(2);
+    const t = 1 / (1 + p * x);
+    const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    return 0.5 * (1 + sign * y);
+}
+
+// Exact Mann-Whitney p-value (for small samples)
+function mannWhitneyExactP(g1, g2, observedU, alternative) {
+    const all = [...g1, ...g2];
+    const n1 = g1.length, n2 = g2.length;
+    let countExtreme = 0;
+    const total = binomial(n1 + n2, n1);
+
+    // Generate all combinations (only feasible for very small samples)
+    if (n1 + n2 > 16) return null;
+
+    function generateCombinations(arr, k, start, current, callback) {
+        if (current.length === k) { callback(current); return; }
+        for (let i = start; i < arr.length; i++) {
+            current.push(arr[i]);
+            generateCombinations(arr, k, i + 1, current, callback);
+            current.pop();
+        }
+    }
+
+    generateCombinations(all, n1, 0, [], (combo) => {
+        const other = all.filter(v => !combo.includes(v));
+        // Rank calculation for this combination
+        const combined = [];
+        combo.forEach(v => combined.push({ val: v, group: 0 }));
+        other.forEach(v => combined.push({ val: v, group: 1 }));
+        combined.sort((a, b) => a.val - b.val);
+
+        let R1 = 0, rank = 1;
+        for (let i = 0; i < combined.length; i++) {
+            if (combined[i].group === 0) R1 += rank;
+            rank++;
+        }
+        const U1 = n1 * n2 + (n1 * (n1 + 1)) / 2 - R1;
+
+        if (alternative === 'two-sided') {
+            if (U1 <= observedU || U1 >= n1 * n2 - observedU) countExtreme++;
+        } else if (alternative === 'greater') {
+            if (U1 >= observedU) countExtreme++;
+        } else {
+            if (U1 <= observedU) countExtreme++;
+        }
+    });
+
+    return countExtreme / total;
+}
+
+function binomial(n, k) {
+    if (k > n) return 0;
+    if (k === 0 || k === n) return 1;
+    let res = 1;
+    for (let i = 0; i < k; i++) {
+        res = res * (n - i) / (i + 1);
+    }
+    return res;
+}
+
+// Monte Carlo simulation for Mann-Whitney p-value
+function mannWhitneyMonteCarlo(g1, g2, observedU, alternative, nSim) {
+    const all = [...g1, ...g2];
+    const n1 = g1.length, n2 = g2.length;
+    let countExtreme = 0;
+
+    for (let sim = 0; sim < nSim; sim++) {
+        // Shuffle
+        const shuffled = [...all];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        const combo = shuffled.slice(0, n1);
+        const other = shuffled.slice(n1);
+
+        const combined = [];
+        combo.forEach(v => combined.push({ val: v, group: 0 }));
+        other.forEach(v => combined.push({ val: v, group: 1 }));
+        combined.sort((a, b) => a.val - b.val);
+
+        let R1 = 0, rank = 1;
+        for (let i = 0; i < combined.length; i++) {
+            if (combined[i].group === 0) R1 += rank;
+            rank++;
+        }
+        const U1 = n1 * n2 + (n1 * (n1 + 1)) / 2 - R1;
+
+        if (alternative === 'two-sided') {
+            if (U1 <= observedU || U1 >= n1 * n2 - observedU) countExtreme++;
+        } else if (alternative === 'greater') {
+            if (U1 >= observedU) countExtreme++;
+        } else {
+            if (U1 <= observedU) countExtreme++;
+        }
+    }
+
+    return countExtreme / nSim;
+}
+
+// ==================== KRUSKAL-WALLIS H TEST ====================
+function runKruskalWallis() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds) { showToast('No hay datos cargados', 'warning'); return; }
+
+    const varName = document.getElementById('kwVariable').value;
+    const factorVar = document.getElementById('kwFactorVariable').value;
+    const alpha = parseFloat(document.getElementById('kwAlpha').value);
+    const postHoc = document.getElementById('kwPostHoc').checked;
+    const showDesc = document.getElementById('kwDescriptives').checked;
+
+    closeModal('kruskalWallisModal');
+    showLoading('Calculando Kruskal-Wallis H...');
+
+    setTimeout(() => {
+        const groups = getGroupedValues(varName, factorVar);
+        const groupNames = Object.keys(groups).sort();
+        const k = groupNames.length;
+
+        if (k < 2) {
+            hideLoading();
+            showToast('Se necesitan al menos 2 grupos', 'error');
+            return;
+        }
+
+        // Combine all values and assign ranks
+        const combined = [];
+        groupNames.forEach((gn, gi) => {
+            groups[gn].forEach(v => combined.push({ val: v, group: gi, groupName: gn }));
+        });
+        combined.sort((a, b) => a.val - b.val);
+        const N = combined.length;
+
+        // Assign ranks with tie correction
+        const ranks = new Array(N);
+        let i = 0;
+        const tieGroups = [];
+        while (i < N) {
+            let j = i;
+            while (j < N && combined[j].val === combined[i].val) j++;
+            const avgRank = (i + 1 + j) / 2;
+            for (let t = i; t < j; t++) ranks[t] = avgRank;
+            if (j - i > 1) tieGroups.push(j - i);
+            i = j;
+        }
+
+        // Sum of ranks per group
+        const R = new Array(k).fill(0);
+        const n = new Array(k).fill(0);
+        for (let i = 0; i < N; i++) {
+            R[combined[i].group] += ranks[i];
+            n[combined[i].group]++;
+        }
+
+        // H statistic
+        let H = (12 / (N * (N + 1))) * R.reduce((sum, r, idx) => sum + (r * r) / n[idx], 0) - 3 * (N + 1);
+
+        // Tie correction
+        let tieCorrection = 1;
+        if (tieGroups.length > 0) {
+            const tieSum = tieGroups.reduce((sum, t) => sum + t * t * t - t, 0);
+            tieCorrection = 1 - tieSum / (N * N * N - N);
+            H = H / tieCorrection;
+        }
+
+        const df = k - 1;
+        const pValue = 1 - chi2CDF(H, df);
+
+        // Eta-squared (effect size for Kruskal-Wallis)
+        const eta2H = (H - k + 1) / (N - k);
+
+        // Median and IQR per group
+        const groupStats = groupNames.map(gn => {
+            const vals = groups[gn];
+            return {
+                name: gn, n: vals.length,
+                median: median(vals),
+                q1: percentile(vals, 25),
+                q3: percentile(vals, 75),
+                min: Math.min(...vals),
+                max: Math.max(...vals)
+            };
+        });
+
+        let html = `<div class="output-header"><div class="output-title"><i class="fas fa-layer-group"></i> Prueba H de Kruskal-Wallis (${escapeHtml(varName)} por ${escapeHtml(factorVar)})</div></div>`;
+
+        if (showDesc) {
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-chart-bar"></i> Estadísticos Descriptivos por Grupo</div>`;
+            html += `<table class="output-table"><thead><tr><th>Grupo</th><th>N</th><th>Mediana</th><th>Q1</th><th>Q3</th><th>Mínimo</th><th>Máximo</th></tr></thead><tbody>`;
+            groupStats.forEach(gs => {
+                html += `<tr><td style="font-weight:700">${escapeHtml(String(gs.name))}</td><td>${gs.n}</td><td>${gs.median.toFixed(4)}</td><td>${gs.q1.toFixed(4)}</td><td>${gs.q3.toFixed(4)}</td><td>${gs.min.toFixed(4)}</td><td>${gs.max.toFixed(4)}</td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+        }
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-info-circle"></i> Rangos</div>`;
+        html += `<table class="output-table"><thead><tr><th>Grupo</th><th>N</th><th>Suma de Rangos</th><th>Rango Medio</th></tr></thead><tbody>`;
+        groupNames.forEach((gn, idx) => {
+            html += `<tr><td style="font-weight:700">${escapeHtml(String(gn))}</td><td>${n[idx]}</td><td>${R[idx].toFixed(2)}</td><td>${(R[idx]/n[idx]).toFixed(4)}</td></tr>`;
+        });
+        html += `<tr style="font-weight:700"><td>Total</td><td>${N}</td><td>${R.reduce((a,b)=>a+b,0).toFixed(2)}</td><td>${((R.reduce((a,b)=>a+b,0))/N).toFixed(4)}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-calculator"></i> Estadísticos de Prueba</div>`;
+        html += `<table class="output-table"><thead><tr><th>Chi-cuadrado (H)</th><th>gl</th><th>Sig. Asintótica</th></tr></thead><tbody>`;
+        html += `<tr><td class="stat-value">${H.toFixed(4)}</td><td>${df}</td><td class="${pValue < alpha ? 'p-sig' : 'p-ns'}">${pValue.toFixed(4)} ${pValue < alpha ? '**' : ''}</td></tr>`;
+        html += `</tbody></table>`;
+        html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--text-muted)">H₀: Las distribuciones de todos los grupos son idénticas | α = ${alpha}</p>`;
+        html += `</div>`;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title"><i class="fas fa-ruler-combined"></i> Tamaño del Efecto</div>`;
+        html += `<table class="output-table"><thead><tr><th>Medida</th><th>Valor</th><th>Interpretación</th></tr></thead><tbody>`;
+        html += `<tr><td>Eta-cuadrado (η²H)</td><td class="stat-value">${eta2H.toFixed(4)}</td><td>${eta2H < 0.01 ? 'Despreciable' : eta2H < 0.06 ? 'Pequeño' : eta2H < 0.14 ? 'Mediano' : 'Grande'}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        // Post-hoc Dunn's test
+        if (postHoc && pValue < alpha && k > 2) {
+            html += `<div class="output-section">`;
+            html += `<div class="output-section-title"><i class="fas fa-not-equal"></i> Comparaciones Post-hoc (Prueba de Dunn)</div>`;
+            html += `<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">Corrección de Bonferroni aplicada. α ajustado = ${(alpha / (k * (k - 1) / 2)).toFixed(4)}</p>`;
+            html += `<table class="output-table"><thead><tr><th>Comparación</th><th>Diferencia de Rangos</th><th>Error Est.</th><th>Z</th><th>Sig.</th><th>Sig. Ajustada</th></tr></thead><tbody>`;
+
+            const comparisons = [];
+            for (let i = 0; i < k; i++) {
+                for (let j = i + 1; j < k; j++) {
+                    const diff = Math.abs(R[i]/n[i] - R[j]/n[j]);
+                    const se = Math.sqrt((N * (N + 1) / 12) * (1/n[i] + 1/n[j]) * tieCorrection);
+                    const zDunn = diff / se;
+                    const pDunn = 2 * (1 - normalCDF(Math.abs(zDunn)));
+                    const pAdj = Math.min(pDunn * (k * (k - 1) / 2), 1);
+                    comparisons.push({ i, j, diff, zDunn, pDunn, pAdj });
+                }
+            }
+
+            comparisons.forEach(c => {
+                html += `<tr><td style="font-weight:700">${escapeHtml(String(groupNames[c.i]))} vs ${escapeHtml(String(groupNames[c.j]))}</td><td>${c.diff.toFixed(4)}</td><td>${(c.diff/c.zDunn).toFixed(4)}</td><td class="stat-value">${c.zDunn.toFixed(4)}</td><td class="${c.pDunn < alpha ? 'p-sig' : 'p-ns'}">${c.pDunn.toFixed(4)}</td><td class="${c.pAdj < alpha ? 'p-sig' : 'p-ns'}">${c.pAdj.toFixed(4)} ${c.pAdj < alpha ? '**' : ''}</td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+        }
+
+        appendToOutput(html);
+        hideLoading();
+        switchTab('output');
+        showToast('Kruskal-Wallis H completado', 'success');
+        addToSyntax(`NPAR TESTS /KRUSKAL-WALLIS=${varName} BY ${factorVar}`);
     }, 100);
 }
 

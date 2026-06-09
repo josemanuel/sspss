@@ -28,6 +28,22 @@
         .app-logo { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-right: 30px; }
         .app-logo i { font-size: 1.6rem; }
         .main-menu { display: flex; gap: 4px; flex: 1; }
+        /* ---- Mobile hamburger menu ---- */
+        .mobile-menu-btn { display: none; background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer; padding: 8px; margin-left: 4px; }
+        .mobile-menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; }
+        .mobile-menu-overlay.active { display: block; }
+        .mobile-menu-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 82vw; max-width: 340px; background: var(--bg-dark); color: var(--text-light); z-index: 1600; transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; overflow: hidden; }
+        .mobile-menu-drawer.open { transform: translateX(0); }
+        .mobile-menu-header { background: var(--primary-dark); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+        .mobile-menu-close { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; padding: 4px 8px; }
+        .mobile-menu-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 0; }
+        .mm-section { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 6px 0; }
+        .mm-section-title { padding: 8px 18px 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.4); }
+        .mm-item { display: flex; align-items: center; gap: 12px; padding: 11px 18px; font-size: 0.9rem; cursor: pointer; transition: background 0.15s; border: none; background: none; color: var(--text-light); width: 100%; text-align: left; }
+        .mm-item:hover, .mm-item:active { background: rgba(255,255,255,0.1); }
+        .mm-item i { width: 20px; text-align: center; color: var(--secondary); font-size: 0.95rem; flex-shrink: 0; }
+        .mm-item.accent i { color: #2ecc71; }
+        .mm-item.accent-purple i { color: #9b59b6; }
         .menu-item { position: relative; padding: 8px 14px; cursor: pointer; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 500; transition: all 0.2s; user-select: none; }
         .menu-item:hover { background: rgba(255,255,255,0.15); }
         .menu-item .dropdown { display: none; position: absolute; top: 100%; left: 0; background: var(--bg-white); color: var(--text-dark); min-width: 220px; border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px 0; z-index: 1001; margin-top: 4px; }
@@ -183,7 +199,7 @@
         .dataset-card-name { font-weight: 600; font-size: 0.9rem; }
         .dataset-card-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
         @media (max-width: 1024px) { .sidebar { position: fixed; left: 0; top: var(--header-h); bottom: 0; transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .mobile-toggle { display: block; } .main-content { margin-left: 0; } .charts-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 768px) { .main-menu { display: none; } .header-actions { gap: 4px; } .header-btn span { display: none; } .header-btn { padding: 8px; } .content-tabs { padding: 0 8px; } .tab-btn { padding: 8px 12px; font-size: 0.8rem; } .tab-btn span { display: none; } .data-toolbar { padding: 8px; } .toolbar-info { display: none; } .modal { width: 95%; max-height: 90vh; overflow-y: auto; } .output-table { font-size: 0.75rem; } .output-table th, .output-table td { padding: 6px; } .analysis-config { grid-template-columns: 1fr; } .modal-footer { flex-wrap: wrap; gap: 6px; } .modal-footer .btn { flex: 1 1 auto; min-width: 110px; font-size: 0.82rem; padding: 8px 10px; } }
+        @media (max-width: 768px) { .main-menu { display: none; } .mobile-menu-btn { display: block; } .header-actions { gap: 4px; } .header-btn span { display: none; } .header-btn { padding: 8px; } .content-tabs { padding: 0 8px; } .tab-btn { padding: 8px 12px; font-size: 0.8rem; } .tab-btn span { display: none; } .data-toolbar { padding: 8px; } .toolbar-info { display: none; } .modal { width: 95%; max-height: 90vh; overflow-y: auto; } .output-table { font-size: 0.75rem; } .output-table th, .output-table td { padding: 6px; } .analysis-config { grid-template-columns: 1fr; } .modal-footer { flex-wrap: wrap; gap: 6px; } .modal-footer .btn { flex: 1 1 auto; min-width: 110px; font-size: 0.82rem; padding: 8px 10px; } }
         @media (max-width: 480px) {
             :root { --header-h: 52px; }
             .header { padding: 0 8px; gap: 6px; }
@@ -228,20 +244,104 @@
 <base target="_blank">
 </head>
 <body>
-    <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv,.db,.sqlite,.sqlite3" onchange="handleFileImport(event)">
+    <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv,.db,.sqlite,.sqlite3,.sav" onchange="handleFileImport(event)">
+    <input type="file" class="file-input" id="savImportInput" accept=".sav" onchange="handleFileImport(event)">
+
+    <!-- Mobile menu overlay + drawer -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+    <div class="mobile-menu-drawer" id="mobileMenuDrawer">
+        <div class="mobile-menu-header">
+            <span><i class="fas fa-chart-line" style="margin-right:8px;"></i>StatView Pro</span>
+            <button class="mobile-menu-close" onclick="closeMobileMenu()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mobile-menu-body">
+            <div class="mm-section">
+                <div class="mm-section-title">Archivo</div>
+                <button class="mm-item" onclick="mm('showNewDatasetDialog')"><i class="fas fa-plus"></i> Nuevo Dataset</button>
+                <button class="mm-item" onclick="mm(null, () => document.getElementById('fileInput').click())"><i class="fas fa-file-import"></i> Importar Excel / CSV / SAV...</button>
+                <button class="mm-item" onclick="mm('showImportSQLDialog')"><i class="fas fa-database"></i> Importar SQLite...</button>
+                <button class="mm-item" onclick="mm('exportToExcel')"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
+                <button class="mm-item" onclick="mm('exportToCSV')"><i class="fas fa-file-csv"></i> Exportar a CSV</button>
+                <button class="mm-item" onclick="mm('exportSAV')"><i class="fas fa-file-alt"></i> Exportar a SAV (SPSS)</button>
+                <button class="mm-item" onclick="mm('loadDemoData')"><i class="fas fa-flask"></i> Cargar Datos Demo</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Editar</div>
+                <button class="mm-item" onclick="mm('addRow')"><i class="fas fa-plus"></i> Agregar Fila</button>
+                <button class="mm-item" onclick="mm('addColumn')"><i class="fas fa-columns"></i> Agregar Columna</button>
+                <button class="mm-item" onclick="mm('showTransformDialog')"><i class="fas fa-calculator"></i> Transformar Variable...</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Asistentes</div>
+                <button class="mm-item accent" onclick="mm('showAdvisorDialog')"><i class="fas fa-magic"></i> StatView Advisor</button>
+                <button class="mm-item accent-purple" onclick="mm('showAIAnalysisSummary')"><i class="fas fa-robot"></i> IA: Resumen + Prompt</button>
+                <button class="mm-item accent-purple" onclick="mm('showAIAnalysisExport')"><i class="fas fa-file-export"></i> IA: Exportar + Prompt</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Descriptivos</div>
+                <button class="mm-item" onclick="mm('showDescriptivesDialog')"><i class="fas fa-list-ol"></i> Estadísticos Descriptivos</button>
+                <button class="mm-item" onclick="mm('showFrequenciesDialog')"><i class="fas fa-chart-pie"></i> Frecuencias</button>
+                <button class="mm-item" onclick="mm('showCrosstabsDialog')"><i class="fas fa-table"></i> Tablas de Contingencia</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Comparar Medias</div>
+                <button class="mm-item" onclick="mm('showTTestDialog')"><i class="fas fa-balance-scale"></i> T-Test</button>
+                <button class="mm-item" onclick="mm('showANOVADialog')"><i class="fas fa-layer-group"></i> ANOVA Unidireccional</button>
+                <button class="mm-item" onclick="mm('showRMANOVADialog')"><i class="fas fa-redo"></i> ANOVA Medidas Repetidas</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Correlación y Regresión</div>
+                <button class="mm-item" onclick="mm('showCorrelationDialog')"><i class="fas fa-project-diagram"></i> Correlaciones</button>
+                <button class="mm-item" onclick="mm('showRegressionDialog')"><i class="fas fa-chart-line"></i> Regresión Lineal</button>
+                <button class="mm-item" onclick="mm('showLogisticRegressionDialog')"><i class="fas fa-wave-square"></i> Regresión Logística</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">No Paramétricos</div>
+                <button class="mm-item" onclick="mm('showChiSquareDialog')"><i class="fas fa-check-square"></i> Chi-Cuadrado</button>
+                <button class="mm-item" onclick="mm('showMannWhitneyDialog')"><i class="fas fa-not-equal"></i> Mann-Whitney U</button>
+                <button class="mm-item" onclick="mm('showWilcoxonDialog')"><i class="fas fa-exchange-alt"></i> Wilcoxon Signed-Rank</button>
+                <button class="mm-item" onclick="mm('showKruskalWallisDialog')"><i class="fas fa-layer-group"></i> Kruskal-Wallis H</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Herramientas</div>
+                <button class="mm-item" onclick="mm('showSampleSizeDialog')"><i class="fas fa-users"></i> Tamaño Muestral</button>
+                <button class="mm-item" onclick="mm('showCIDialog')"><i class="fas fa-ruler-combined"></i> Intervalos de Confianza</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Gráficos</div>
+                <button class="mm-item" onclick="mm(null, () => generateChart('histogram'))"><i class="fas fa-chart-bar"></i> Histograma</button>
+                <button class="mm-item" onclick="mm(null, () => generateChart('boxplot'))"><i class="fas fa-box"></i> Boxplot</button>
+                <button class="mm-item" onclick="mm(null, () => generateChart('scatter'))"><i class="fas fa-braille"></i> Dispersión</button>
+                <button class="mm-item" onclick="mm(null, () => generateChart('bar'))"><i class="fas fa-chart-column"></i> Barras</button>
+                <button class="mm-item" onclick="mm(null, () => generateChart('pie'))"><i class="fas fa-chart-pie"></i> Pastel</button>
+                <button class="mm-item" onclick="mm(null, () => generateChart('line'))"><i class="fas fa-chart-line"></i> Líneas</button>
+            </div>
+            <div class="mm-section">
+                <div class="mm-section-title">Sintaxis</div>
+                <button class="mm-item" onclick="mm(null, () => switchTab('syntax'))"><i class="fas fa-code"></i> Editor de Sintaxis</button>
+                <button class="mm-item" onclick="mm('runAllSyntax')"><i class="fas fa-play"></i> Ejecutar Todo</button>
+            </div>
+            <div class="mm-section">
+                <button class="mm-item" onclick="mm('showHelpDialog')"><i class="fas fa-question-circle"></i> Ayuda</button>
+                <button class="mm-item" onclick="mm('showAboutDialog')"><i class="fas fa-info-circle"></i> Acerca de...</button>
+            </div>
+        </div>
+    </div>
 
     <header class="app-header">
         <button class="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <button class="mobile-menu-btn" onclick="openMobileMenu()" title="Menú"><i class="fas fa-th-list"></i></button>
         <div class="app-logo"><i class="fas fa-chart-line"></i><span>StatView Pro</span></div>
         <nav class="main-menu">
             <div class="menu-item"><i class="fas fa-file"></i> Archivo
                 <div class="dropdown">
                     <div class="dropdown-item" onclick="showNewDatasetDialog()"><i class="fas fa-plus"></i> Nuevo Dataset</div>
-                    <div class="dropdown-item" onclick="document.getElementById('fileInput').click()"><i class="fas fa-file-import"></i> Importar Excel/CSV...</div>
+                    <div class="dropdown-item" onclick="document.getElementById('fileInput').click()"><i class="fas fa-file-import"></i> Importar Excel/CSV/SAV...</div>
                     <div class="dropdown-item" onclick="showImportSQLDialog()"><i class="fas fa-database"></i> Importar SQLite...</div>
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-item" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Exportar a Excel</div>
                     <div class="dropdown-item" onclick="exportToCSV()"><i class="fas fa-file-csv"></i> Exportar a CSV</div>
+                    <div class="dropdown-item" onclick="exportSAV()"><i class="fas fa-file-alt"></i> Exportar a SAV (SPSS)</div>
                     <div class="dropdown-item" onclick="exportSQLite()"><i class="fas fa-database"></i> Exportar SQLite</div>
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-item" onclick="loadDemoData()"><i class="fas fa-flask"></i> Cargar Datos Demo</div>
@@ -798,7 +898,7 @@
                     <h3 style="color: var(--primary); font-size: 1rem; margin-bottom: 10px;"><i class="fas fa-user"></i> Autor</h3>
                     <p style="font-size: 0.95rem; line-height: 1.6; margin: 0;">
                         <strong>Dr. José Manuel Fernández Carreira</strong><br>
-                        <span style="color: var(--text-muted); font-size: 0.85rem;">https://orcid.org/0000-0002-4097-3224</span>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">Desarrollador &amp; Investigador en Métodos Cuantitativos</span>
                     </p>
                 </div>
 
@@ -813,7 +913,8 @@
                         </thead>
                         <tbody>
                             <tr><td style="font-weight: 600;"><i class="fas fa-database" style="color: var(--secondary); margin-right: 6px;"></i>Base de datos</td><td>SQLite vía SQL.js (WebAssembly) — completamente en cliente, sin servidor</td></tr>
-                            <tr><td style="font-weight: 600;"><i class="fas fa-file-import" style="color: var(--secondary); margin-right: 6px;"></i>Importación</td><td>Excel (.xlsx), CSV, SQLite (.db / .sqlite / .sqlite3)</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-file-import" style="color: var(--secondary); margin-right: 6px;"></i>Importación</td><td>Excel (.xlsx), CSV, SQLite (.db / .sqlite / .sqlite3), <strong>SPSS (.sav)</strong> — numérico y cadena, compresión estándar y sin comprimir</td></tr>
+                            <tr><td style="font-weight: 600;"><i class="fas fa-file-export" style="color: var(--secondary); margin-right: 6px;"></i>Exportación</td><td>Excel (.xlsx), CSV, SQLite, <strong>SPSS (.sav)</strong> con nombres, etiquetas de variable, tipos y compresión byte-level compatible con SPSS 16+</td></tr>
                             <tr><td style="font-weight: 600;"><i class="fas fa-file-export" style="color: var(--secondary); margin-right: 6px;"></i>Exportación</td><td>Excel, CSV, SQLite (.db), HTML (output), PNG (gráficos)</td></tr>
                             <tr><td style="font-weight: 600;"><i class="fas fa-table" style="color: var(--secondary); margin-right: 6px;"></i>Vista de Datos</td><td>Tabla editable tipo spreadsheet con navegación por teclado (flechas, Tab)</td></tr>
                             <tr><td style="font-weight: 600;"><i class="fas fa-tags" style="color: var(--secondary); margin-right: 6px;"></i>Vista de Variables</td><td>Definición de tipos (numérico, entero, cadena, fecha), etiquetas, valores, medida (nominal / ordinal / escala)</td></tr>
@@ -1444,6 +1545,8 @@ async function handleFileImport(event) {
             await importCSV(arrayBuffer, file.name);
         } else if (['db', 'sqlite', 'sqlite3'].includes(ext)) {
             await importSQLite(arrayBuffer, file.name);
+        } else if (ext === 'sav') {
+            await importSAV(arrayBuffer, file.name);
         } else {
             throw new Error('Formato no soportado');
         }
@@ -1459,6 +1562,491 @@ async function handleFileImport(event) {
     }
 
     event.target.value = '';
+}
+
+// ==================== SAV (SPSS) IMPORT ====================
+async function importSAV(arrayBuffer, filename) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const dv = new DataView(arrayBuffer);
+
+    // --- Validate magic bytes "$FL2" or "$FL3" ---
+    const magic = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
+    if (!magic.startsWith('$FL')) throw new Error('No es un archivo SAV de SPSS válido');
+
+    // SAV uses little-endian integers and IEEE 754 doubles
+    // Header record (176 bytes fixed)
+    const decoder = new TextDecoder('latin1');
+    const readStr = (offset, len) => decoder.decode(bytes.slice(offset, offset + len)).replace(/\0/g, '').trimEnd();
+    const readI32 = (o) => dv.getInt32(o, true);
+    const readF64 = (o) => dv.getFloat64(o, true);
+
+    // Bytes 64–67: number of variables per case
+    const nVarsPerCase = readI32(64);
+    // Bytes 68–71: compressed flag (0=no, 1=yes byte-compression, 2=zlib)
+    const compressed = readI32(68);
+    // Bytes 72–75: number of cases (-1 = unknown)
+    let nCasesHeader = readI32(72);
+    // Bytes 76–83: bias (100.0 for SPSS)
+    const bias = readF64(76);
+    // System missing value: very large negative
+    const SYSMIS = -1.7976931348623157e+308;
+
+    if (compressed === 2) throw new Error('SAV con compresión ZLIB (formato IBM SPSS 21+) no soportado. Guarda el archivo con compresión estándar o como SAV sin comprimir.');
+
+    // --- Parse variable records starting at offset 176 ---
+    let offset = 176;
+    const variables = [];       // { name, label, width, type (0=num, >0=string len), missingVals }
+    const varIndexMap = [];     // maps case slot → variable index (for multi-segment string vars)
+
+    while (offset < bytes.length) {
+        const recType = readI32(offset);
+        if (recType === 999) { offset += 8; break; } // filler / end of dict
+        if (recType !== 2) break; // Not a variable record
+
+        const typeCode   = readI32(offset + 4);   // 0=numeric, n>0=string bytes
+        const hasLabel   = readI32(offset + 8);
+        const nMissing   = readI32(offset + 12);  // -3,-2,-1,0,1,2,3
+        const printFmt   = readI32(offset + 16);
+        const writeFmt   = readI32(offset + 20);
+        const rawName    = readStr(offset + 24, 8);
+        offset += 32;
+
+        let label = '';
+        if (hasLabel) {
+            const lblLen = readI32(offset); offset += 4;
+            const lblPad = Math.ceil(lblLen / 4) * 4;
+            label = readStr(offset, lblLen);
+            offset += lblPad;
+        }
+
+        const absMissing = Math.abs(nMissing);
+        if (absMissing > 0) {
+            // Skip missing value descriptors (each 8 bytes)
+            const slots = absMissing <= 3 ? absMissing : 3;
+            offset += slots * 8;
+        }
+
+        const isStringContinuation = (rawName.trim() === '');
+        if (!isStringContinuation) {
+            const varDef = {
+                name: rawName.trim().replace(/[^a-zA-Z0-9_]/g, '_') || `var${variables.length + 1}`,
+                label: label || rawName.trim(),
+                type: typeCode, // 0=numeric, >0=string bytes
+                width: typeCode === 0 ? 8 : typeCode,
+                decimals: 2,
+                measure: typeCode === 0 ? 'scale' : 'nominal',
+                values: ''
+            };
+            variables.push(varDef);
+            varIndexMap.push(variables.length - 1);
+            // String vars >8 bytes occupy multiple 8-byte slots
+            if (typeCode > 8) {
+                const extraSlots = Math.ceil(typeCode / 8) - 1;
+                for (let s = 0; s < extraSlots; s++) varIndexMap.push(-1); // continuation marker
+            }
+        } else {
+            varIndexMap.push(-1);
+        }
+    }
+
+    // --- Skip other record types until recType 999 ---
+    // We may have already hit the break above; scan for value labels (type 3), etc.
+    // For simplicity, skip to data by looking for type 7 (info records) and consuming them
+    while (offset + 4 <= bytes.length) {
+        const rt = readI32(offset);
+        if (rt === 999) { offset += 8; break; }
+        if (rt === 3) {
+            // Value labels record
+            const nLabels = readI32(offset + 4); offset += 8;
+            for (let i = 0; i < nLabels; i++) {
+                const lLen = bytes[offset + 8]; // label length byte at position 8 of each entry
+                const pad = Math.ceil((lLen + 1) / 8) * 8;
+                offset += pad;
+            }
+            // Immediately followed by record type 4 (variable list for labels)
+            if (readI32(offset) === 4) {
+                const nVars = readI32(offset + 4); offset += 8;
+                offset += nVars * 4;
+            }
+        } else if (rt === 6) {
+            // Document record
+            const nLines = readI32(offset + 4); offset += 8;
+            offset += nLines * 80;
+        } else if (rt === 7) {
+            // Info records (various subtypes)
+            const subtype = readI32(offset + 4);
+            const elemSize = readI32(offset + 8);
+            const nElems   = readI32(offset + 12);
+            offset += 16 + elemSize * nElems;
+        } else if (rt === 2) {
+            // Another variable record — shouldn't happen here, but be safe
+            break;
+        } else {
+            // Unknown, try to skip by consuming 4 bytes
+            offset += 4;
+        }
+    }
+
+    // --- Read data section ---
+    const nVarSlots = varIndexMap.length; // 8-byte slots per case
+    const rows = [];
+    const stringBuffers = {}; // varIdx → accumulated string bytes
+
+    if (compressed === 0) {
+        // Uncompressed: each case = nVarSlots × 8 bytes
+        while (offset + nVarSlots * 8 <= bytes.length) {
+            const row = new Array(variables.length).fill('');
+            const slotStrBufs = {};
+            for (let s = 0; s < nVarSlots; s++) {
+                const varIdx = varIndexMap[s];
+                if (varIdx === -1) {
+                    // String continuation — find parent
+                    let parentIdx = -1;
+                    for (let back = s - 1; back >= 0; back--) { if (varIndexMap[back] !== -1) { parentIdx = varIndexMap[back]; break; } }
+                    if (parentIdx >= 0 && variables[parentIdx].type > 0) {
+                        if (!slotStrBufs[parentIdx]) slotStrBufs[parentIdx] = [];
+                        slotStrBufs[parentIdx].push(...bytes.slice(offset, offset + 8));
+                    }
+                } else {
+                    const v = variables[varIdx];
+                    if (v.type === 0) {
+                        const val = readF64(offset);
+                        row[varIdx] = (val === SYSMIS || val < -1e300) ? '' : val;
+                    } else {
+                        if (!slotStrBufs[varIdx]) slotStrBufs[varIdx] = [];
+                        slotStrBufs[varIdx].push(...bytes.slice(offset, offset + 8));
+                    }
+                }
+                offset += 8;
+            }
+            // Decode accumulated string buffers
+            Object.keys(slotStrBufs).forEach(vi => {
+                const buf = new Uint8Array(slotStrBufs[vi]);
+                row[+vi] = decoder.decode(buf).replace(/\0/g, '').trimEnd();
+            });
+            rows.push(row);
+        }
+    } else {
+        // Byte-compressed (code 1): 8-byte compression block, each byte = opcode
+        let caseRow = new Array(variables.length).fill('');
+        let slotInCase = 0;
+        const slotStrBufs = {};
+        let eof = false;
+
+        while (!eof && offset + 8 <= bytes.length) {
+            const block = bytes.slice(offset, offset + 8);
+            offset += 8;
+
+            for (let b = 0; b < 8 && !eof; b++) {
+                if (slotInCase >= nVarSlots) {
+                    // Decode string buffers for the completed case
+                    Object.keys(slotStrBufs).forEach(vi => {
+                        const buf = new Uint8Array(slotStrBufs[vi]);
+                        caseRow[+vi] = decoder.decode(buf).replace(/\0/g, '').trimEnd();
+                    });
+                    rows.push(caseRow);
+                    caseRow = new Array(variables.length).fill('');
+                    for (const k in slotStrBufs) delete slotStrBufs[k];
+                    slotInCase = 0;
+                }
+
+                const code = block[b];
+                const varIdx = varIndexMap[slotInCase];
+
+                if (code === 0) {
+                    // Padding / ignored opcode
+                } else if (code === 252) {
+                    // End of compressed data
+                    eof = true;
+                } else if (code === 253) {
+                    // Verbatim 8-byte value follows
+                    if (offset + 8 > bytes.length) { eof = true; break; }
+                    const slot8 = bytes.slice(offset, offset + 8);
+                    offset += 8;
+                    if (varIdx === -1) {
+                        let parentIdx = -1;
+                        for (let back = slotInCase - 1; back >= 0; back--) { if (varIndexMap[back] !== -1) { parentIdx = varIndexMap[back]; break; } }
+                        if (parentIdx >= 0 && variables[parentIdx].type > 0) {
+                            if (!slotStrBufs[parentIdx]) slotStrBufs[parentIdx] = [];
+                            slotStrBufs[parentIdx].push(...slot8);
+                        }
+                    } else {
+                        const v = variables[varIdx];
+                        if (v.type === 0) {
+                            const val = dv.getFloat64(offset - 8, true);
+                            caseRow[varIdx] = (val === SYSMIS || val < -1e300) ? '' : val;
+                        } else {
+                            if (!slotStrBufs[varIdx]) slotStrBufs[varIdx] = [];
+                            slotStrBufs[varIdx].push(...slot8);
+                        }
+                    }
+                    slotInCase++;
+                } else if (code === 254) {
+                    // 8 spaces (blank string segment)
+                    if (varIdx !== -1 && variables[varIdx] && variables[varIdx].type > 0) {
+                        if (!slotStrBufs[varIdx]) slotStrBufs[varIdx] = [];
+                        slotStrBufs[varIdx].push(32,32,32,32,32,32,32,32);
+                    }
+                    slotInCase++;
+                } else if (code === 255) {
+                    // System missing
+                    if (varIdx !== -1) caseRow[varIdx] = '';
+                    slotInCase++;
+                } else {
+                    // Compressed numeric: code - bias
+                    if (varIdx !== -1 && variables[varIdx] && variables[varIdx].type === 0) {
+                        caseRow[varIdx] = code - bias;
+                    }
+                    slotInCase++;
+                }
+            }
+        }
+        // Flush last partial case
+        if (slotInCase > 0) {
+            Object.keys(slotStrBufs).forEach(vi => {
+                const buf = new Uint8Array(slotStrBufs[vi]);
+                caseRow[+vi] = decoder.decode(buf).replace(/\0/g, '').trimEnd();
+            });
+            rows.push(caseRow);
+        }
+    }
+
+    if (variables.length === 0) throw new Error('No se encontraron variables en el archivo SAV');
+    if (rows.length === 0) throw new Error('El archivo SAV no contiene casos de datos');
+
+    const dsName = filename.replace(/\.[^/.]+$/, '');
+    createDataset(dsName);
+    const ds = AppState.datasets[AppState.currentDataset];
+    ds.variables = variables;
+    ds.data = rows;
+    ds.rowCount = rows.length;
+    ds.colCount = variables.length;
+    AppState.variables = [...ds.variables];
+    AppState.data = ds.data.map(r => [...r]);
+    autoDetectTypes();
+    renderDataTable();
+    renderVarTable();
+    updateSidebarVars();
+    updateDataInfo();
+    syncToSQLite();
+    showToast(`SAV importado: ${variables.length} variables, ${rows.length} casos`, 'success');
+}
+
+// ==================== SAV (SPSS) EXPORT ====================
+function exportSAV() {
+    const ds = AppState.datasets[AppState.currentDataset];
+    if (!ds || !ds.data || ds.data.length === 0) { showToast('No hay datos para exportar', 'warning'); return; }
+
+    showLoading('Generando archivo SAV...');
+    setTimeout(() => {
+        try {
+            const vars = ds.variables;
+            const rows = ds.data;
+            const nCases = rows.length;
+            const enc = new TextEncoder();
+
+            // Helper: pad string to multiple of 4
+            const pad4 = (s, len) => { const b = new Uint8Array(len); const src = enc.encode(s); b.set(src.slice(0, len)); for (let i = src.length; i < len; i++) b[i] = 32; return b; };
+            const pad8 = (s, len) => { const b = new Uint8Array(len); const src = enc.encode(s); b.set(src.slice(0, len)); for (let i = src.length; i < len; i++) b[i] = 32; return b; };
+
+            const writeI32 = (v) => { const b = new Uint8Array(4); new DataView(b.buffer).setInt32(0, v, true); return b; };
+            const writeF64 = (v) => { const b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, v, true); return b; };
+
+            // Count var slots (numeric = 1 slot, string = ceil(width/8) slots)
+            let nVarSlots = 0;
+            const varSlotCounts = vars.map(v => {
+                const slots = v.type > 0 ? Math.ceil(v.type / 8) : 1;
+                nVarSlots += slots;
+                return slots;
+            });
+
+            const parts = [];
+
+            // --- File header (176 bytes) ---
+            const hdr = new Uint8Array(176);
+            const hdv = new DataView(hdr.buffer);
+            // Magic
+            hdr.set(enc.encode('$FL2'), 0);
+            // Product name (60 bytes, offsets 4–63)
+            hdr.set(pad8('StatView Pro SAV Export', 60), 4);
+            // Layout code = 2 (offset 60 in SAV spec is actually 64 from file start in 1-indexed, but DataView is 0-indexed)
+            hdv.setInt32(60, 2, true);
+            // nVarsPerCase (offset 64)
+            hdv.setInt32(64, nVarSlots, true);
+            // Compressed = 1 (byte compression) (offset 68)
+            hdv.setInt32(68, 1, true);
+            // nCases (offset 72)
+            hdv.setInt32(72, nCases, true);
+            // Bias = 100.0 (offset 76, 8 bytes)
+            hdv.setFloat64(76, 100.0, true);
+            // Creation date 9 bytes (offset 84), time 8 bytes (offset 93)
+            const now = new Date();
+            const dateStr = String(now.getDate()).padStart(2,'0') + ' ' +
+                ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] + ' ' +
+                String(now.getFullYear()).slice(2);
+            const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+            hdr.set(enc.encode(dateStr.padEnd(9,' ')), 84);
+            hdr.set(enc.encode(timeStr.padEnd(8,' ')), 93);
+            // File label 64 bytes (offset 101–164), pad with spaces
+            hdr.set(pad8('Created by StatView Pro', 64), 101);
+            // padding byte at 165
+            hdr[165] = 32;
+            // 3 alignment bytes at 166–168 = 0
+            parts.push(hdr);
+
+            // --- Variable records (recType = 2) ---
+            vars.forEach((v, vi) => {
+                const slots = varSlotCounts[vi];
+                const nameBytes = pad8(v.name.substring(0, 8).toUpperCase(), 8);
+                const labelBytes = v.label ? enc.encode(v.label.substring(0, 120)) : null;
+                const labelLen = labelBytes ? labelBytes.length : 0;
+                const labelPad = labelLen > 0 ? Math.ceil(labelLen / 4) * 4 : 0;
+                const hasLabel = labelLen > 0 ? 1 : 0;
+
+                for (let s = 0; s < slots; s++) {
+                    const rec = new Uint8Array(32);
+                    const rdv = new DataView(rec.buffer);
+                    rdv.setInt32(0, 2, true);  // recType = 2 (variable)
+                    // typeCode: 0=numeric; for string, first slot = declared width, continuation = -1
+                    const typeCode = v.type === 0 ? 0 : (s === 0 ? Math.min(v.type, 255) : -1);
+                    rdv.setInt32(4, typeCode, true);
+                    rdv.setInt32(8, (s === 0 ? hasLabel : 0), true);  // hasLabel
+                    rdv.setInt32(12, 0, true);                         // nMissingVals
+                    // Format: F8.2 for numeric (0x050802), A for string
+                    const numFmt  = 0x050802;  // type=5(F), width=8, decimals=2
+                    const strFmt  = ((Math.min(v.type, 255) & 0xff) << 16) | (0x01 << 8) | 0x00; // type=1(A)
+                    const fmt = v.type === 0 ? numFmt : strFmt;
+                    rdv.setInt32(16, fmt, true);  // print format
+                    rdv.setInt32(20, fmt, true);  // write format
+                    if (s === 0) {
+                        rec.set(nameBytes, 24);
+                    } else {
+                        // Continuation slot: 8 spaces as name
+                        for (let i = 24; i < 32; i++) rec[i] = 32;
+                    }
+                    parts.push(rec);
+
+                    if (s === 0 && hasLabel) {
+                        parts.push(writeI32(labelLen));
+                        const lb = new Uint8Array(labelPad);
+                        lb.set(labelBytes);
+                        for (let i = labelLen; i < labelPad; i++) lb[i] = 32;
+                        parts.push(lb);
+                    }
+                }
+            });
+
+            // --- Filler record (recType = 999) ---
+            parts.push(writeI32(999));
+            parts.push(writeF64(0));
+
+            // --- Data section (byte-compressed) ---
+            // Build flat slot array per case, then compress
+            const SYSMIS_BYTES = (() => { const b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, -Number.MAX_VALUE, true); return b; })();
+            const BIAS = 100.0;
+
+            // Use a growable buffer for data section
+            let dataBuf = new Uint8Array(nCases * nVarSlots * 2); // estimate
+            let dataBufPos = 0;
+            const ensureDataBuf = (needed) => {
+                if (dataBufPos + needed > dataBuf.length) {
+                    const newBuf = new Uint8Array(Math.max(dataBuf.length * 2, dataBufPos + needed + 1024));
+                    newBuf.set(dataBuf);
+                    dataBuf = newBuf;
+                }
+            };
+            const appendData = (bytes) => {
+                ensureDataBuf(bytes.length);
+                dataBuf.set(bytes, dataBufPos);
+                dataBufPos += bytes.length;
+            };
+
+            let opcodeBuf = new Uint8Array(8);
+            let opcodePos = 0;
+            const verbatimParts = [];
+
+            const flushOpcodeBlock = () => {
+                appendData(opcodeBuf);
+                verbatimParts.forEach(vp => appendData(vp));
+                opcodeBuf = new Uint8Array(8);
+                opcodePos = 0;
+                verbatimParts.length = 0;
+            };
+
+            const writeSlot = (isNum, numVal, strBuf8) => {
+                if (opcodePos === 8) flushOpcodeBlock();
+                if (isNum) {
+                    if (numVal === null || numVal === '' || numVal !== numVal) {
+                        opcodeBuf[opcodePos++] = 255; // system missing
+                    } else {
+                        const n = Number(numVal);
+                        if (!isFinite(n)) {
+                            opcodeBuf[opcodePos++] = 255;
+                        } else if (Number.isInteger(n) && n >= 1 - BIAS && n <= 251 - BIAS) {
+                            opcodeBuf[opcodePos++] = Math.round(n + BIAS); // compressed int
+                        } else {
+                            opcodeBuf[opcodePos++] = 253; // verbatim
+                            const vb = new Uint8Array(8);
+                            new DataView(vb.buffer).setFloat64(0, n, true);
+                            verbatimParts.push(vb);
+                        }
+                    }
+                } else {
+                    // String segment
+                    const allSpaces = strBuf8.every(b => b === 32);
+                    if (allSpaces) {
+                        opcodeBuf[opcodePos++] = 254; // blank string
+                    } else {
+                        opcodeBuf[opcodePos++] = 253; // verbatim
+                        verbatimParts.push(strBuf8.slice());
+                    }
+                }
+            };
+
+            rows.forEach(row => {
+                vars.forEach((v, vi) => {
+                    if (v.type === 0) {
+                        writeSlot(true, row[vi], null);
+                    } else {
+                        // Encode string into ceil(type/8)*8 bytes, split into 8-byte segments
+                        const fullLen = varSlotCounts[vi] * 8;
+                        const strEnc = new Uint8Array(fullLen).fill(32);
+                        const strBytes = enc.encode(String(row[vi] ?? ''));
+                        strEnc.set(strBytes.slice(0, fullLen));
+                        for (let s = 0; s < varSlotCounts[vi]; s++) {
+                            writeSlot(false, null, strEnc.slice(s * 8, s * 8 + 8));
+                        }
+                    }
+                });
+            });
+
+            // Flush final opcode block (remaining opcodes, pad with 0s = ignored)
+            if (opcodePos > 0) flushOpcodeBlock();
+
+            parts.push(dataBuf.slice(0, dataBufPos));
+
+            // Assemble final buffer
+            const totalLen = parts.reduce((s, p) => s + p.length, 0);
+            const out = new Uint8Array(totalLen);
+            let pos = 0;
+            parts.forEach(p => { out.set(p, pos); pos += p.length; });
+
+            const blob = new Blob([out], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dsName = AppState.currentDataset || 'dataset';
+            a.download = dsName + '.sav';
+            a.click();
+            URL.revokeObjectURL(url);
+            hideLoading();
+            showToast(`SAV exportado: ${vars.length} variables, ${nCases} casos`, 'success');
+        } catch (e) {
+            hideLoading();
+            showToast('Error al exportar SAV: ' + e.message, 'error');
+            console.error(e);
+        }
+    }, 100);
 }
 
 async function importExcel(arrayBuffer, filename) {
@@ -1736,6 +2324,27 @@ function switchTab(tabName) {
 
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
+}
+
+function openMobileMenu() {
+    document.getElementById('mobileMenuDrawer').classList.add('open');
+    document.getElementById('mobileMenuOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileMenu() {
+    document.getElementById('mobileMenuDrawer').classList.remove('open');
+    document.getElementById('mobileMenuOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Helper: call named function or lambda, then close mobile menu
+function mm(fnName, fn) {
+    closeMobileMenu();
+    setTimeout(() => {
+        if (fn) { fn(); }
+        else if (fnName && typeof window[fnName] === 'function') { window[fnName](); }
+    }, 180); // slight delay so drawer closes first
 }
 
 function closeModal(modalId) {
